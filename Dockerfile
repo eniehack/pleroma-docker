@@ -22,11 +22,14 @@ ENTRYPOINT ["/tini", "--"]
 # Get build dependencies
 RUN \
        apt-get update \
-    && apt-get install -y --no-install-recommends git wget ca-certificates gnupg2 \
+    && apt-get install -y --no-install-recommends apt-utils \
+    && apt-get install -y --no-install-recommends git wget ca-certificates gnupg2 build-essential \
+    \
     && wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb \
     && dpkg -i erlang-solutions_1.0_all.deb \
     && apt-get update \
     && apt-get install -y --no-install-recommends esl-erlang elixir \
+    \
     && rm -rf /var/lib/apt/lists/*
 
 # Limit permissions
@@ -64,13 +67,14 @@ RUN \
     && git checkout $PLEROMA_VERSION \
     && git pull --rebase --autostash
 
+# Precompile
+RUN \
+       mix deps.get \
+    && mix compile
+
 # Insert overrides and config helper
 COPY --chown=pleroma:pleroma ./docker-config.exs /docker-config.exs
 COPY --chown=pleroma:pleroma ./custom.d /home/pleroma/pleroma
-
-# Precompile
 RUN \
        ln -s /docker-config.exs config/prod.secret.exs \
-    && ln -s /docker-config.exs config/dev.secret.exs \
-    && mix deps.get \
-    && mix compile
+    && ln -s /docker-config.exs config/dev.secret.exs
