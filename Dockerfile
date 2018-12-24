@@ -10,14 +10,7 @@ ENV LANG=C.UTF-8
 # Register pseudo-entrypoint
 ADD ./entrypoint.sh /
 RUN chmod a+x /entrypoint.sh
-CMD ["/entrypoint.sh"]
-
-# Set "real" entrypoint to an init system.
-# TODO: Replace with --init when docker 18.06 is GA
-ENV TINI_VERSION v0.18.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-RUN chmod +x /tini
-ENTRYPOINT ["/tini", "--"]
+ENTRYPOINT ["/entrypoint.sh"]
 
 # Get build dependencies
 RUN \

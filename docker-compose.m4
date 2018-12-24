@@ -7,7 +7,7 @@ define(<env_inline>, <${upcase($1):?upcase($1)}>)
 define(<env_inline_fb>, <${upcase($1):-$2}>)
 
 {
-  "version": "3",
+  "version": "3.7",
 
   ifdef(<__DOCKER_NETWORK>, <
     "networks": {
@@ -91,6 +91,7 @@ define(<env_inline_fb>, <${upcase($1):-$2}>)
           "env_fb(<pleroma_uploads_path>, </uploads>)"
         ]
       },
+      "init": true,
       "restart": "unless-stopped",
       "links": [
         ifelse(__SCRIPT_DEPLOY_POSTGRES, true, <"db">)
