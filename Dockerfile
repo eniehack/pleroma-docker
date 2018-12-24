@@ -29,6 +29,7 @@ RUN \
     && dpkg -i erlang-solutions_1.0_all.deb \
     && apt-get update \
     && apt-get install -y --no-install-recommends esl-erlang elixir \
+    && apt-get install -y ruby \
     \
     && rm -rf /var/lib/apt/lists/*
 
