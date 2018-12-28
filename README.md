@@ -1,5 +1,10 @@
 # Pleroma-Docker (Unofficial)
 
+Note: There's a revive effort going on in #1 and #2.<br>
+Check them out and try `feature/modernize` if you feel adventurous.
+
+<hr>
+
 [Pleroma](https://pleroma.social/) is a selfhosted social network that uses OStatus/ActivityPub.
 
 This repository dockerizes it for easier deployment.
