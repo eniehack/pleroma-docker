@@ -3,6 +3,14 @@
 require 'yaml'
 require 'json'
 
+def getval(val)
+    if val.is_a?(String)
+        val.start_with?('<D>') ? val.delete('<D>') : val.to_json()
+    else
+        val.to_json()
+    end
+end
+
 config = YAML.load_file(ARGV[0])
 
 if config["version"] != 1
@@ -15,8 +23,8 @@ config["app"].each do |atom, content|
     content.each do |sub, settings|
         buf += "config :#{atom}, #{sub.is_a?(Symbol) ? ":#{sub}" : sub}"
 
-        if !settings.is_a? Hash
-            buf += ": #{settings.to_json}\n"
+        if !settings.is_a?(Hash)
+            buf += ": #{getval(settings)}\n"
             next
         end
 
@@ -27,13 +35,13 @@ config["app"].each do |atom, content|
                 buf += ", #{name}: ["
 
                 value.each do |k, v|
-                    buf += "#{k}: #{v.to_json},"
+                    buf += "#{k}: #{getval(v)},"
                 end
-                buf.chop!
+                buf.chop!()
 
                 buf += "]"
             else
-                buf += ", #{name}: #{value.to_json}"
+                buf += ", #{name}: #{getval(value)}"
             end
         end
 

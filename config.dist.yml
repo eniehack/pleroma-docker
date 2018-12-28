@@ -6,22 +6,20 @@ version: 1
 # You can enter any config in here that you want.
 # Pleroma-Docker will try to translate it into elixir for you.
 #
-# For example:
+# <T> is a special member for modifying the YAML->Elixir translation.
+# When set to `Array` it causes the generation of a "keyed array" literal instead
+# of multiple named parameters to `config`.
 #
-# :foo:
-#   Bar.Baz:
-#     x: true
+# <D> is a special prefix that causes a string to be passed <D>irectly without quoting.
+# Useful for referencing modules like Ecto adapters or other symbols that are usually wrapped in yaml.
 #
-# becomes `config :foo, Bar.Baz, x: true`.
-#
-# It is assumed that all config keys that have to be passed through to
-# pleroma must start with an atom on the first layer (eg :pleroma).
+# Remember to take a look at your config with `./pleroma config`.
 #
 
 app:
   # The loglevel to use in pleroma.
   :logger:
-    level: info
+    level: <D>:info
 
   :pleroma:
     Pleroma.Repo:
@@ -32,6 +30,7 @@ app:
       password: pleroma
       database: pleroma
       pool_size: 16
+      adapter: <D>Ecto.Adapters.Postgres
 
     Pleroma.Web.Endpoint:
       # Location where your instance will be reachable.

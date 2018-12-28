@@ -4,7 +4,7 @@ set -e
 set -x
 
 # Generate a config file
-ruby /config/parser.rb /config/config.yml > runtime-config.exs
+ruby /conf/parser.rb /conf/config.yml > config/runtime-config.exs
 
 # Recompile if needed
 if [[ ! -z "$RECOMPILE" ]]; then

@@ -11,36 +11,38 @@ Usage:
     $0 [action]
 
 Actions:
-    build                     Rebuild the pleroma container.
+    build                      Rebuild the pleroma container.
 
-    dump                      Dump the generated docker-compose.yml to stdout.
+    config [file = config.yml] Print the generated pleroma config to stdout.
 
-    debug [bin] [args...]     Launches a new pleroma container but uses \$bin instead of phx.server as entrypoint.
-                              **Warning**: This is intended for debugging pleroma with tools like :debugger and :observer.
-                              It thus forwards your X-Server into docker and temporarily fiddles with your xhost
-                              access controls. If this is a security concern for you, please export NO_X_FORWARDING=1
-                              before launching a debugger session.
+    dump                       Dump the generated docker-compose.yml to stdout.
 
-    enter                     Spawn a shell inside the container for debugging/maintenance.
-                              This command does not link to the postgres container.
-                              If you need that use #debug instead.
+    debug [bin] [args...]      Launches a new pleroma container but uses \$bin instead of phx.server as entrypoint.
+                               **Warning**: This is intended for debugging pleroma with tools like :debugger and :observer.
+                               It thus forwards your X-Server into docker and temporarily fiddles with your xhost
+                               access controls. If this is a security concern for you, please export NO_X_FORWARDING=1
+                               before launching a debugger session.
 
-    logs                      Show the current container logs.
+    enter                      Spawn a shell inside the container for debugging/maintenance.
+                               This command does not link to the postgres container.
+                               If you need that use #debug instead.
 
-    mix [task] [args...]      Run a mix task without entering the container.
+    logs                       Show the current container logs.
 
-    mod [file]                Creates the file in custom.d and downloads the content from pleroma.social.
-                              The download respects your \$PLEROMA_VERSION from .env.
+    mix [task] [args...]       Run a mix task without entering the container.
 
-    passthrough / p [...]     Pass any custom command to docker-compose.
+    mod [file]                 Creates the file in custom.d and downloads the content from pleroma.social.
+                               The download respects your \$PLEROMA_VERSION from .env.
 
-    restart                   Executes #stop and #start respectively.
+    passthrough / p [...]      Pass any custom command to docker-compose.
 
-    start / up                Start pleroma and sibling services.
+    restart                    Executes #stop and #start respectively.
 
-    stop / down               Stop pleroma and sibling services.
+    start / up                 Start pleroma and sibling services.
 
-    status / ps               Show the current container status.
+    stop / down                Stop pleroma and sibling services.
+
+    status / ps                Show the current container status.
 
 Environment:
     DEBUG can be used to modify the loglevel.
@@ -91,6 +93,7 @@ load_env() {
 }
 
 action__build()       { docker_compose build --build-arg __BUST_CACHE="$(date +%s)" server; }
+action__config()      { docker run --rm -t -i -v $(pwd):/mnt ruby:alpine sh -c "cd /mnt && ruby config_parser/parser.rb ${1:-config.yml}"; }
 action__dump()        { cat <(render_template); }
 action__enter()       { docker_compose exec server ash -c 'cd /pleroma && ash'; }
 action__logs()        { docker_compose logs -f; }
