@@ -1,5 +1,12 @@
 #!/usr/bin/env ruby
 
+#
+# TODO: Write a better translator.
+# This is just rough text replacement right now
+# but it's already way better than the exs stuff
+# we had durin the .env files.
+#
+
 require 'yaml'
 require 'json'
 
