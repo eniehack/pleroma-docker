@@ -5,13 +5,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 
-# Prepare mounts and entrypoint
+# Prepare mounts
 VOLUME /custom.d
 VOLUME /conf
-
-COPY ./entrypoint.sh /
-RUN chmod a+x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
 
 # Expose default pleroma port to host
 EXPOSE 4000
@@ -28,6 +24,11 @@ RUN \
     && apt-get install -y --no-install-recommends esl-erlang elixir \
     \
     && rm -rf /var/lib/apt/lists/*
+
+# Add entrypoint
+COPY ./entrypoint.sh /
+RUN chmod a+x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
 
 # Limit permissions
 ARG DOCKER_UID=1000
