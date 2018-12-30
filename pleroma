@@ -17,6 +17,20 @@ flags=""
 # Helpers                                               #
 #########################################################
 
+has_command() {
+    if command -v 1>/dev/null 2>&1 "$1"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+require_command() {
+    if ! has_command "$1"; then
+        printf "\nError: This action requires the command '%s' in your PATH.\n" "$1"
+        exit 1
+    fi
+}
 render_template() {
     m4 $flags docker-compose.m4 | awk 'NF'
 }
@@ -45,6 +59,27 @@ load_env() {
     done < .env
 }
 
+download_file() { # $1: source, $2: target
+    if has_command curl; then
+        curl -sSL "$1" -o "$2"
+    elif has_command wget; then
+        wget "$1" -O "$2"
+    else
+        printf "\nError: This action requires either curl or wget in your PATH.\n"
+        exit 1
+    fi
+}
+
+request_file_content() { # $1: source
+    if has_command curl; then
+        curl -sSL "$1"
+    elif has_command wget; then
+        wget "$1" -O- 2>/dev/null
+    else
+        printf "\nError: This action requires either curl or wget in your PATH.\n"
+        exit 1
+    fi
+}
 #########################################################
 # Subcommands                                           #
 #########################################################
