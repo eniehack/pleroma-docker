@@ -11,6 +11,14 @@ set -o pipefail
 # Globals                                               #
 #########################################################
 
+readonly GITLAB_URI="https://git.pleroma.social"
+readonly PREFIX_API="api/v4/projects/pleroma%2Fpleroma/repository"
+readonly ENDPOINT_FILE="pleroma/pleroma/raw"
+readonly ENDPOINT_LIST="pleroma/pleroma/files"
+readonly ENDPOINT_TAG="$PREFIX_API/tags"
+readonly ENDPOINT_BLOB="$PREFIX_API/blobs"
+readonly ENDPOINT_BRANCH="$PREFIX_API/branches"
+
 flags=""
 
 #########################################################
@@ -31,11 +39,17 @@ require_command() {
         exit 1
     fi
 }
+
 render_template() {
+    require_command m4
+    require_command awk
+
     m4 $flags docker-compose.m4 | awk 'NF'
 }
 
 docker_compose() {
+    require_command docker-compose
+
     docker-compose \
         -f <(render_template) \
         --project-directory . \
@@ -80,6 +94,7 @@ request_file_content() { # $1: source
         exit 1
     fi
 }
+
 #########################################################
 # Subcommands                                           #
 #########################################################
@@ -89,7 +104,9 @@ action__build() {
 }
 
 action__config() {
-    docker run --rm -t -i -v $(pwd):/mnt ruby:alpine sh -c "cd /mnt && ruby config_parser/parser.rb ${1:-config.yml}"
+    require_command docker
+
+    docker run --rm -t -i -v "$(pwd):/mnt" ruby:alpine sh -c "cd /mnt && ruby config_parser/parser.rb ${1:-config.yml}"
 }
 
 action__dump() {
@@ -97,23 +114,23 @@ action__dump() {
 }
 
 action__enter() {
-    docker_compose exec server ash -c 'cd /pleroma && ash'
+    docker_compose exec server sh -c 'cd ~/pleroma && bash'
 }
 
 action__logs() {
- docker_compose logs -f $*
+    docker_compose logs "$@"
 }
 
 action__mix() {
-    docker_compose exec server ash -c "cd /pleroma && mix $*"
+    docker_compose exec server sh -c "cd ~/pleroma && mix $*"
 }
 
 action__passthrough() {
-    docker_compose $*
+    docker_compose "$@"
 }
 
 action__p() {
-    action__passthrough $*
+    action__passthrough "$@"
 }
 
 action__restart() {
@@ -146,7 +163,14 @@ action__ps() {
 }
 
 action__debug() {
-    debug_mounts="-v $(pwd)/custom.d:/custom.d -v $(pwd)/debug.d/build:/home/pleroma/pleroma/_build -v $(pwd)/debug.d/deps:/home/pleroma/pleroma/deps"
+    require_command xhost
+
+    local debug_mounts
+    debug_mounts="
+        -v $(pwd)/custom.d:/custom.d \
+        -v $(pwd)/debug.d/build:/home/pleroma/pleroma/_build \
+        -v $(pwd)/debug.d/deps:/home/pleroma/pleroma/deps \
+    "
 
     if [[ ! -d ./debug.d ]]; then
         mkdir -p ./debug.d/{build,deps}
@@ -158,22 +182,54 @@ action__debug() {
 
     action__stop
 
-    docker_compose run --rm -u pleroma -w /home/pleroma/pleroma $debug_mounts server bash -c 'cp -rvf /custom.d/* /home/pleroma/pleroma && mix deps.get'
+    docker_compose run --rm -u pleroma -w /home/pleroma/pleroma "$debug_mounts" server bash -c 'cp -rvf /custom.d/* /home/pleroma/pleroma && mix deps.get'
 
-    x_flags=""
+    local x_flags=""
     if [[ $NO_X_FORWARDING != 1 ]]; then
         x_flags="-e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix"
     fi
 
     [[ $NO_X_FORWARDING == 1 ]] || xhost +local:root
-    docker_compose run --rm -u pleroma -w /home/pleroma/pleroma $debug_mounts $x_flags server bash -c "cp -rvf /custom.d/* /home/pleroma/pleroma && $*"
+    docker_compose run --rm -u pleroma -w /home/pleroma/pleroma "$debug_mounts" "$x_flags" server bash -c "cp -rvf /custom.d/* /home/pleroma/pleroma && $*"
     [[ $NO_X_FORWARDING == 1 ]] || xhost -local:root
 }
 
 action__mod() {
-    echo "Preparing 'custom.d/$1' for modding..."
-    install -D <(echo '') ./custom.d/$1
-    wget -O ./custom.d/$1 https://git.pleroma.social/pleroma/pleroma/raw/$PLEROMA_VERSION/$1
+    require_command dialog
+    require_command jq
+    require_command curl
+
+    if [[ ! -d ./debug.d ]]; then
+        mkdir ./debug.d
+    fi
+
+    if [[ ! -f ./debug.d/mod_files.json ]] || [[ -n "$(find ./debug.d/mod_files.json -mmin +5)" ]]; then
+        curl -sSL -# "$GITLAB_URI/$ENDPOINT_LIST/$PLEROMA_VERSION?format=json" > ./debug.d/mod_files.json
+
+        if [[ -f ./debug.d/mod_files.lst ]]; then
+            rm ./debug.d/mod_files.lst
+        fi
+
+        jq -r 'map("\(.)\n") | add' <./debug.d/mod_files.json >./debug.d/mod_files.lst
+    fi
+
+    if [[ -f ./debug.d/mod_files.lst ]] && [[ -r ./debug.d/mod_files.lst ]]; then
+        choices=""
+
+        while read -r candidate; do
+            choices="$choices $candidate $(echo "$candidate" | rev | cut -d/ -f1 | rev)"
+        done <<< "$(grep -E ".*$1.*" <./debug.d/mod_files.lst)"
+
+        res=$(mktemp)
+        dialog --menu "Select the file you want to modify:" 35 80 30 $choices 2>"$res"
+        choice=$(cat "$res")
+
+        install -D <(echo '') "./custom.d/$choice"
+        curl -sSL -# "$GITLAB_URI/$ENDPOINT_FILE/$PLEROMA_VERSION/$choice" > "./custom.d/$choice"
+    else
+        install -D <(echo '') "./custom.d/$1"
+        curl -sSL -# "$GITLAB_URI/$ENDPOINT_FILE/$PLEROMA_VERSION/$1" > "./custom.d/$1"
+    fi
 }
 
 #########################################################
@@ -250,18 +306,18 @@ if [[ -z "$1" ]]; then
 fi
 
 # Check for SHOPTs
-if [[ ! -z "$SHOPT" ]]; then
+if [[ -n "$SHOPT" ]]; then
     for opt in $SHOPT; do
         if [[ $opt =~ ":" ]]; then
-            set -o ${opt//-o:/}
+            set -o "${opt//-o:/}"
         else
-            set $opt
+            set "$opt"
         fi
     done
 fi
 
 # Check for DEBUG
-if [[ ! -z "$DEBUG" ]]; then
+if [[ -n "$DEBUG" ]]; then
     if [[ $DEBUG == 1 ]]; then
         export DEBUG_COMMANDS=1
     elif [[ $DEBUG == 2 ]]; then
@@ -275,10 +331,10 @@ load_env
 # Guess function name of current command and call it if present
 func="action__${1}"
 
-if type -t $func 2>&1 1>/dev/null; then
+if type -t "$func" 1>/dev/null 2>&1; then
     shift
     [[ $DEBUG != 1 ]] || set -x
-    $func $@
+    $func "$@"
     { [[ $DEBUG != 1 ]] || set +x; } 2>/dev/null
 else
     print_help
