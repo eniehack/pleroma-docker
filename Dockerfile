@@ -70,8 +70,7 @@ RUN \
 
 # Precompile
 RUN \
-       mix deps.get \
-    && mix compile
+       NO_CONFIG=1 COMPILE_ONLY=1 /entrypoint.sh
 
 # Prepare runtime config
 RUN \
@@ -80,5 +79,3 @@ RUN \
 
 # Insert overrides
 COPY --chown=pleroma:pleroma ./custom.d /home/pleroma/pleroma
-
-# Recompiles at runtime if custom.d contained elixir code.
