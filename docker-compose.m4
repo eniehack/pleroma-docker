@@ -7,7 +7,7 @@ define(<env_inline>, <${upcase($1):?upcase($1)}>)
 define(<env_inline_fb>, <${upcase($1):-$2}>)
 
 {
-  "version": "3",
+  "version": "3.7",
 
   ifdef(<__DOCKER_NETWORK>, <
     "networks": {
@@ -88,39 +88,21 @@ define(<env_inline_fb>, <${upcase($1):-$2}>)
           "env(<pleroma_version>)",
           "env(<docker_uid>)",
           "env(<docker_gid>)",
-          "env_fb(<pleroma_uploads_path>, </uploads>)",
+          "env_fb(<pleroma_uploads_path>, </uploads>)"
         ]
       },
+      "init": true,
       "restart": "unless-stopped",
       "links": [
         ifelse(__SCRIPT_DEPLOY_POSTGRES, true, <"db">)
       ],
       "environment": [
-        "env_fb(<mix_env>, <prod>)",
-
-        "env_fb(<postgres_ip>, <db>)",
-        "env(<postgres_db>)",
-        "env(<postgres_user>)",
-        "env(<postgres_password>)",
-
-        "env(<pleroma_url>)",
-        "env(<pleroma_loglevel>)",
-        "env(<pleroma_scheme>)",
-        "env(<pleroma_port>)",
-        "env(<pleroma_secret_key_base>)",
-        "env(<pleroma_name>)",
-        "env(<pleroma_admin_email>)",
-        "env(<pleroma_max_notice_chars>)",
-        "env(<pleroma_registrations_open>)",
-        "env(<pleroma_media_proxy_enabled>)",
-        "env(<pleroma_media_proxy_redirect_on_failure>)",
-        "env(<pleroma_media_proxy_url>)",
-        "env(<pleroma_db_pool_size>)",
-        "env(<pleroma_chat_enabled>)",
-        "env_fb(<pleroma_uploads_path>, </uploads>)"
+        "env_fb(<mix_env>, <prod>)"
       ],
       "volumes": [
         "./custom.d:/custom.d",
+        "./config.yml:/conf/config.yml:ro",
+        "./config_parser/parser.rb:/conf/parser.rb:ro",
         "env_inline(<docker_datadir>)/uploads:env_inline_fb(<pleroma_uploads_path>, </uploads>)"
       ],
       "labels": [

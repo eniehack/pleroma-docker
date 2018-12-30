@@ -1,5 +1,6 @@
 data
 .env
+config.yml
 custom.d/
 !custom.d/.gitkeep
 docker-compose.yml
