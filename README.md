@@ -1,7 +1,7 @@
 # Pleroma-Docker (Unofficial)
 
 Note: There's a revive effort going on in #1 and #3.<br>
-Check them out and try `feature/modernize` if you feel adventurous.
+Check them out and try `develop` if you feel adventurous.
 
 <hr>
 
