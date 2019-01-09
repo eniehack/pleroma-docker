@@ -100,9 +100,8 @@ define(<env_inline_fb>, <${upcase($1):-$2}>)
         "env_fb(<mix_env>, <prod>)"
       ],
       "volumes": [
-        "./custom.d:/custom.d",
-        "./config.yml:/conf/config.yml:ro",
-        "./config_parser/parser.rb:/conf/parser.rb:ro",
+        "./custom.d:/custom.d:ro",
+        "./config.exs:/home/pleroma/pleroma/config/prod.secret.exs:ro",
         "env_inline(<docker_datadir>)/uploads:env_inline_fb(<pleroma_uploads_path>, </uploads>)"
       ],
       "labels": [

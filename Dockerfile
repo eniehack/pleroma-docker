@@ -1,13 +1,13 @@
 FROM debian:9-slim
 
 # Set up environment
+ENV MIX_ENV=prod
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 
 # Prepare mounts
 VOLUME /custom.d
-VOLUME /conf
 
 # Expose default pleroma port to host
 EXPOSE 4000
@@ -39,7 +39,7 @@ RUN \
        groupadd --gid ${DOCKER_GID} pleroma \
     && useradd -m -s /bin/bash --gid ${DOCKER_GID} --uid ${DOCKER_UID} pleroma \
     && mkdir -p /custom.d $PLEROMA_UPLOADS_PATH \
-    && chown -R pleroma:pleroma /custom.d /conf $PLEROMA_UPLOADS_PATH
+    && chown -R pleroma:pleroma /custom.d $PLEROMA_UPLOADS_PATH
 
 USER pleroma
 WORKDIR /home/pleroma
@@ -56,11 +56,6 @@ WORKDIR /home/pleroma/pleroma
 ARG __BUST_CACHE
 ENV __BUST_CACHE $__BUST_CACHE
 
-# Get rebar and hex
-RUN \
-       mix local.hex --force \
-    && mix local.rebar --force
-
 # Fetch changes, checkout
 ARG PLEROMA_VERSION
 RUN \
@@ -70,12 +65,9 @@ RUN \
 
 # Precompile
 RUN \
-       NO_CONFIG=1 COMPILE_ONLY=1 /entrypoint.sh
-
-# Prepare runtime config
-RUN \
-       ln -sf runtime-config.exs config/prod.secret.exs \
-    && ln -sf runtime-config.exs config/dev.secret.exs
+    cp ./config/dev.exs ./config/prod.secret.exs \
+    && BUILDTIME=1 /entrypoint.sh \
+    && rm ./config/prod.secret.exs
 
 # Insert overrides
 COPY --chown=pleroma:pleroma ./custom.d /home/pleroma/pleroma

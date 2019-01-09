@@ -40,6 +40,22 @@ require_command() {
     fi
 }
 
+require_file() {
+    if [[ ! -f $1 ]]; then
+        echo "File missing: '$1' (Example at: '$2')"
+        FILE_FAILED=1
+    fi
+}
+
+throw_file_errors() {
+    if [[ -n "$FILE_FAILED" ]]; then
+        echo ""
+        echo "Please create the missing files first."
+        echo "The script will now exit."
+        exit 1
+    fi
+}
+
 render_template() {
     require_command m4
     require_command awk
@@ -57,12 +73,6 @@ docker_compose() {
 }
 
 load_env() {
-    if [[ ! -f .env ]]; then
-        echo "Please create a .env file first"
-        echo "(Copy .env.dist to .env for a template)"
-        exit 1
-    fi
-
     while read -r line; do
         if [[ "$line" == \#* ]] || [[ -z "$line" ]]; then
             continue;
@@ -101,12 +111,6 @@ request_file_content() { # $1: source
 
 action__build() {
     docker_compose build --build-arg __BUST_CACHE="$(date +%s)" server
-}
-
-action__config() {
-    require_command docker
-
-    docker run --rm -t -i -v "$(pwd):/mnt" ruby:alpine sh -c "cd /mnt && ruby config_parser/parser.rb ${1:-config.yml}"
 }
 
 action__dump() {
@@ -241,12 +245,10 @@ print_help() {
 Pleroma Maintenance Script
 
 Usage:
-    $0 [action]
+    $0 [action] [action-args...]
 
 Actions:
-    build                      Rebuild the pleroma container.
-
-    config [file = config.yml] Print the generated pleroma config to stdout.
+    build                      (Re)build the pleroma container.
 
     dump                       Dump the generated docker-compose.yml to stdout.
 
@@ -284,8 +286,6 @@ Environment:
 
     SHOPT can be used to modify shell options.
         Pass a list of options to this variable like SHOPT='-x -e'.
-        -e is always on unless you set it to +e.
-
         For setting long options with -o use a colon (:) instead of a space
         to seperate the option from -o. For example: SHOPT='-x -e -o:pipefail'.
 
@@ -325,18 +325,36 @@ if [[ -n "$DEBUG" ]]; then
     fi
 fi
 
+# Check if the option is "help"
+case "$1" in
+    "help"|"h"|"--help"|"-h"|"-?")
+        print_help
+        exit 0
+    ;;
+esac
+
+# Check if the called command exists
+func="action__${1}"
+if ! type -t "$func" 1>/dev/null 2>&1; then
+    echo "Unknown flag or subcommand."
+    echo "Try '$0 help'"
+    exit 1
+fi
+
+# Fail if mandatory files are missing
+require_file ".env" ".env.dist"
+require_file "config.exs" "config.dist.exs"
+throw_file_errors
+
 # Parse .env
 load_env
 
-# Guess function name of current command and call it if present
-func="action__${1}"
+# Handle DEBUG=2
+[[ $DEBUG != 1 ]] || set -x
 
-if type -t "$func" 1>/dev/null 2>&1; then
-    shift
-    [[ $DEBUG != 1 ]] || set -x
-    $func "$@"
-    { [[ $DEBUG != 1 ]] || set +x; } 2>/dev/null
-else
-    print_help
-    exit 1
-fi
+# Jump to called function
+shift
+$func "$@"
+
+# Disable debug mode
+{ [[ $DEBUG != 1 ]] || set +x; } 2>/dev/null
