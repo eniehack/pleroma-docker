@@ -2,29 +2,32 @@
 # shellcheck shell=dash
 
 set -e
-set -x
 
 if [ -n "$BUILDTIME" ]; then
+    echo "#> Preparing compilation..."
+
     mix local.rebar --force
     mix local.hex --force
 
+    echo "#> Compiling..."
     mix deps.get
     mix compile
     exit 0
 fi
 
-set +x
-while ! pg_isready -U pleroma -d postgres://db:5432/pleroma -t 1; do
-    echo "[X] Database is starting up..."
-    sleep 1s
-done
-set -x
+echo "#> Applying customizations and patches.."
+rsync -av /custom.d/ /home/pleroma/pleroma/
 
-# Recompile
+echo "#> Recompiling..."
 mix compile
 
-# Migrate db
+echo "#> Waiting until database is ready..."
+while ! pg_isready -U pleroma -d postgres://db:5432/pleroma -t 1; do
+    sleep 1s
+done
+
+echo "#> Upgrading database..."
 mix ecto.migrate
 
-# Off we go!
+echo "#> Liftoff!"
 exec mix phx.server
