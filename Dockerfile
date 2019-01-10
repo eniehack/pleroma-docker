@@ -53,8 +53,8 @@ WORKDIR /home/pleroma/pleroma
 # used version/branch/tag/commitish/... which originates in the script.
 # If the host doesn't have the required tool for "smart version detection"
 # we'll just use the current timestamp here which forces a rebuild every time.
-ARG __BUST_CACHE
-ENV __BUST_CACHE $__BUST_CACHE
+ARG __CACHE_TAG
+ENV __CACHE_TAG $__CACHE_TAG
 
 # Fetch changes, checkout
 ARG PLEROMA_VERSION

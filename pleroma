@@ -13,6 +13,7 @@ set -o pipefail
 
 readonly GITLAB_URI="https://git.pleroma.social"
 readonly PREFIX_API="api/v4/projects/pleroma%2Fpleroma/repository"
+readonly ENDPOINT_REPO="pleroma/pleroma.git"
 readonly ENDPOINT_FILE="pleroma/pleroma/raw"
 readonly ENDPOINT_LIST="pleroma/pleroma/files"
 readonly ENDPOINT_TAG="$PREFIX_API/tags"
@@ -110,7 +111,40 @@ request_file_content() { # $1: source
 #########################################################
 
 action__build() {
-    docker_compose build --build-arg __BUST_CACHE="$(date +%s)" server
+    local cacheTag=""
+
+    # Alternative 1: Get tags or branches from git (if installed)
+    if [[ -z "$cacheTag" ]] && has_command git; then
+        set +o pipefail
+        local resolvedHash
+        resolvedHash="$(git ls-remote $GITLAB_URI/$ENDPOINT_REPO | grep "/$PLEROMA_VERSION" | awk '{ print $1 }')"
+        set -o pipefail
+
+        if [[ -n "$resolvedHash" ]]; then
+            cacheTag="$resolvedHash"
+        fi
+    fi
+
+    # Alternative 2: Current time with date or awk
+    if [[ -z "$cacheTag" ]] && has_command date; then
+        cacheTag="$(date '+%s')"
+    fi
+
+    if [[ -z "$cacheTag" ]] && has_command awk; then
+        cacheTag="$(awk 'BEGIN { srand(); print srand() }')"
+    fi
+
+    # Last resort: Constant value, user will need to run `docker system prune`
+    if [[ -z "$cacheTag" ]]; then
+        echo ""
+        echo "Warning: Cannot set a reliably unique cache tag."
+        echo "         You may be running outdated code!"
+        echo ""
+
+        cacheTag="broken-host-env"
+    fi
+
+    docker_compose build --build-arg __CACHE_TAG="$cacheTag" server
 }
 
 action__dump() {
