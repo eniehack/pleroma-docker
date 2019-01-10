@@ -14,7 +14,7 @@ EXPOSE 4000
 # Get dependencies
 RUN \
     apk add --no-cache --virtual .tools \
-        git curl \
+        git curl postgresql-client \
     \
     && apk add --no-cache --virtual .sdk \
         build-base \

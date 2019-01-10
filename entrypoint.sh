@@ -13,10 +13,17 @@ if [ -n "$BUILDTIME" ]; then
     exit 0
 fi
 
+set +x
+while ! pg_isready -U pleroma -d postgres://db:5432/pleroma -t 1; do
+    echo "[X] Database is starting up..."
+    sleep 1s
+done
+set -x
+
+# Recompile
 mix compile
 
 # Migrate db
-mix ecto.create
 mix ecto.migrate
 
 # Off we go!
