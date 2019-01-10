@@ -1,10 +1,9 @@
-FROM debian:9-slim
+FROM alpine:3.8
 
 # Set up environment
-ENV MIX_ENV=prod
-ENV DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
+ENV MIX_ENV=prod
 
 # Prepare mounts
 VOLUME /custom.d
@@ -12,18 +11,16 @@ VOLUME /custom.d
 # Expose default pleroma port to host
 EXPOSE 4000
 
-# Get erlang, elixir, and dependencies
+# Get dependencies
 RUN \
-       apt-get update \
-    && apt-get install -y --no-install-recommends apt-utils \
-    && apt-get install -y --no-install-recommends git wget ca-certificates gnupg2 build-essential ruby \
+    apk add --no-cache --virtual .tools \
+        git curl \
     \
-    && wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb \
-    && dpkg -i erlang-solutions_1.0_all.deb \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends esl-erlang elixir \
+    && apk add --no-cache --virtual .sdk \
+        build-base \
     \
-    && rm -rf /var/lib/apt/lists/*
+    && apk add --no-cache --virtual .runtime \
+        erlang erlang-runtime-tools erlang-xmerl elixir
 
 # Add entrypoint
 COPY ./entrypoint.sh /
@@ -36,8 +33,8 @@ ARG DOCKER_GID=1000
 ARG PLEROMA_UPLOADS_PATH=/uploads
 
 RUN \
-       groupadd --gid ${DOCKER_GID} pleroma \
-    && useradd -m -s /bin/bash --gid ${DOCKER_GID} --uid ${DOCKER_UID} pleroma \
+       addgroup --gid ${DOCKER_GID} pleroma \
+    && adduser -S -s /bin/ash -G pleroma -u ${DOCKER_UID} pleroma \
     && mkdir -p /custom.d $PLEROMA_UPLOADS_PATH \
     && chown -R pleroma:pleroma /custom.d $PLEROMA_UPLOADS_PATH
 

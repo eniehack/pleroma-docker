@@ -1,9 +1,10 @@
-#!/bin/bash
+#!/bin/ash
+# shellcheck shell=dash
 
 set -e
 set -x
 
-if [[ -n "$BUILDTIME" ]]; then
+if [ -n "$BUILDTIME" ]; then
     mix local.rebar --force
     mix local.hex --force
 

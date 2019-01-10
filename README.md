@@ -37,7 +37,7 @@ or guides from the community. A few are linked below. This list is not exhaustiv
 
 ### Prerequisites
 
-- 1-2GB of free HDD space (yeah it sucks, Alpine Linux soontm)
+- 500mb of free HDD space
 - `m4` and `awk` in remotely recent versions
 - `curl` or `wget` if you want smarter build caches and commands like `./pleroma mod`
 - `jq` and `dialog` if you want to use `./pleroma mod`
