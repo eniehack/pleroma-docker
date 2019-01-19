@@ -4,6 +4,7 @@ config.yml
 custom.d/
 !custom.d/.gitkeep
 docker-compose.yml
+config.exs
 
 # Created by https://www.gitignore.io/api/osx,linux,windows
 
