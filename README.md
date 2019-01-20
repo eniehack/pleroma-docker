@@ -66,7 +66,7 @@ If you need to fix some bigger issues you can also spawn a shell with `./pleroma
 ### Customization
 
 Add your customizations (and their folder structure) to `custom.d/`.
-They will be mounted and symlinked into the right place when the container starts.
+They will be copied into the right place when the container starts.
 You can even replace/patch pleroma’s code with this, because the project is recompiled at startup if needed.
 
 In general: Prepending `custom.d/` to pleroma’s customization guides should work all the time.<br>
@@ -98,11 +98,11 @@ Values: `true` / `false`
 
 By default pleroma-docker deploys a postgresql container and links it to pleroma’s container as a zero-config data store.
 If you already have a postgres database or want to host it on a physically different machine, set this value to `false`.
-Make sure to edit the `config :pleroma, Pleroma.Repo` variables when doing that.
+Make sure to edit the `config :pleroma, Pleroma.Repo` variables in `config.exs` when doing that.
 
 #### Reverse Proxy (`SCRIPT_USE_PROXY`)
 
-Values: `traefik` / `nginx` / `manual`
+Values: `traefik` / `nginx` / `apache` / `manual`
 
 Pleroma is usually run behind a reverse-proxy.<br>
 Pleroma-docker gives you multiple options here.
@@ -156,8 +156,6 @@ In manual mode we do not create any reverse proxy for you.
 You'll have to figure something out on your own.
 
 If `SCRIPT_BIND_IN_MANUAL` is `true` we will forward `pleroma:4000` to `${SCRIPT_BIND_IP}:${SCRIPT_PORT_HTTP}`.
-
-**Pleroma's internal SSL implementation is currently not supported.**
 
 #### SSL (`SCRIPT_ENABLE_SSL`)
 
