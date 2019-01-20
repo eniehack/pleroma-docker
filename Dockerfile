@@ -20,6 +20,9 @@ RUN \
         build-base \
     \
     && apk add --no-cache --virtual .runtime \
+        --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main \
+        --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community \
+        --force-overwrite \
         erlang erlang-runtime-tools erlang-xmerl elixir
 
 # Add entrypoint
@@ -33,7 +36,7 @@ ARG DOCKER_GID=1000
 ARG PLEROMA_UPLOADS_PATH=/uploads
 
 RUN \
-       addgroup --gid ${DOCKER_GID} pleroma \
+       addgroup -g ${DOCKER_GID} pleroma \
     && adduser -S -s /bin/ash -G pleroma -u ${DOCKER_UID} pleroma \
     && mkdir -p /custom.d $PLEROMA_UPLOADS_PATH \
     && chown -R pleroma:pleroma /custom.d $PLEROMA_UPLOADS_PATH
