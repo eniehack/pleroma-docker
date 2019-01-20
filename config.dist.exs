@@ -18,7 +18,7 @@ config :pleroma, Pleroma.Repo,
 # Uncomment what you need or delete it all.
 #
 # Want to use the config generator instead?
-# Try `./pleroma mix pleroma.instance gen` and then `./pleroma cp conf/generated_config.exs config.exs`.
+# Try `./pleroma mix pleroma.instance gen` and then `./pleroma cp /home/pleroma/pleroma/config/generated_config.exs config.exs`.
 #
 # Need some inspiration?
 # Take a look at https://git.pleroma.social/pleroma/pleroma/tree/develop/config
