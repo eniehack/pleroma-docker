@@ -39,7 +39,7 @@ or guides from the community. A few are linked below. This list is not exhaustiv
 
 - 500mb of free HDD space
 - `m4` and `awk` in remotely recent versions
-- `curl` or `wget` if you want smarter build caches and commands like `./pleroma mod`
+- `git`, `curl`, or `wget` if you want smarter build caches and commands like `./pleroma mod`
 - `jq` and `dialog` if you want to use `./pleroma mod`
 - Bash 4.0+ (fancy scripting stuff)
 - Docker 18.06.0+ and docker-compose 1.22.0-rc1+ (We need compose file format 3.7+ for `init:`)
