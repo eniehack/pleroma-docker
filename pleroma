@@ -1,72 +1,72 @@
 #!/bin/bash
 
+#########################################################
+# Options                                               #
+#########################################################
+
 set -e
 set -o pipefail
 
-print_help() {
-    echo "
-Pleroma Maintenance Script
+#########################################################
+# Globals                                               #
+#########################################################
 
-Usage:
-    $0 [action]
-
-Actions:
-    build                     Rebuild the pleroma container.
-
-    dump                      Dump the generated docker-compose.yml to stdout.
-
-    debug [bin] [args...]     Launches a new pleroma container but uses \$bin instead of phx.server as entrypoint.
-                              **Warning**: This is intended for debugging pleroma with tools like :debugger and :observer.
-                              It thus forwards your X-Server into docker and temporarily fiddles with your xhost
-                              access controls. If this is a security concern for you, please export NO_X_FORWARDING=1
-                              before launching a debugger session.
-
-    enter                     Spawn a shell inside the container for debugging/maintenance.
-                              This command does not link to the postgres container.
-                              If you need that use #debug instead.
-
-    logs                      Show the current container logs.
-
-    mix [task] [args...]      Run a mix task without entering the container.
-
-    mod [file]                Creates the file in custom.d and downloads the content from pleroma.social.
-                              The download respects your \$PLEROMA_VERSION from .env.
-
-    passthrough / p [...]     Pass any custom command to docker-compose.
-
-    restart                   Executes #stop and #start respectively.
-
-    start / up                Start pleroma and sibling services.
-
-    stop / down               Stop pleroma and sibling services.
-
-    status / ps               Show the current container status.
-
-Environment:
-    DEBUG can be used to modify the loglevel.
-        DEBUG=1 prints all commands before they are executed.
-        DEBUG=2 prints all bash statements before they are executed (a lot).
-
-    SHOPT can be used to modify shell options.
-        Pass a list of options to this variable like SHOPT='-x -e'.
-        -e is always on unless you set it to +e.
-
-        For setting long options with -o use a colon (:) instead of a space
-        to seperate the option from -o. For example: SHOPT='-x -e -o:pipefail'.
-
-Contributing:
-    You can report bugs or contribute to this project at:
-        https://glitch.sh/sn0w/pleroma-docker
-"
-}
+readonly GITLAB_URI="https://git.pleroma.social"
+readonly PREFIX_API="api/v4/projects/pleroma%2Fpleroma/repository"
+readonly ENDPOINT_REPO="pleroma/pleroma.git"
+readonly ENDPOINT_FILE="pleroma/pleroma/raw"
+readonly ENDPOINT_LIST="pleroma/pleroma/files"
+readonly ENDPOINT_TAG="$PREFIX_API/tags"
+readonly ENDPOINT_BLOB="$PREFIX_API/blobs"
+readonly ENDPOINT_BRANCH="$PREFIX_API/branches"
 
 flags=""
 
+#########################################################
+# Helpers                                               #
+#########################################################
+
+has_command() {
+    if command -v 1>/dev/null 2>&1 "$1"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+require_command() {
+    if ! has_command "$1"; then
+        printf "\nError: This action requires the command '%s' in your PATH.\n" "$1"
+        exit 1
+    fi
+}
+
+require_file() {
+    if [[ ! -f $1 ]]; then
+        echo "File missing: '$1' (Example at: '$2')"
+        FILE_FAILED=1
+    fi
+}
+
+throw_file_errors() {
+    if [[ -n "$FILE_FAILED" ]]; then
+        echo ""
+        echo "Please create the missing files first."
+        echo "The script will now exit."
+        exit 1
+    fi
+}
+
 render_template() {
+    require_command m4
+    require_command awk
+
     m4 $flags docker-compose.m4 | awk 'NF'
 }
 
 docker_compose() {
+    require_command docker-compose
+
     docker-compose \
         -f <(render_template) \
         --project-directory . \
@@ -74,12 +74,6 @@ docker_compose() {
 }
 
 load_env() {
-    if [[ ! -f .env ]]; then
-        echo "Please create a .env file first"
-        echo "(Copy .env.dist to .env for a template)"
-        exit 1
-    fi
-
     while read -r line; do
         if [[ "$line" == \#* ]] || [[ -z "$line" ]]; then
             continue;
@@ -90,32 +84,131 @@ load_env() {
     done < .env
 }
 
-action__build()       { docker_compose build --build-arg __BUST_CACHE="$(date +%s)" server; }
-action__dump()        { cat <(render_template); }
-action__enter()       { docker_compose exec server ash -c 'cd /pleroma && ash'; }
-action__logs()        { docker_compose logs -f; }
-action__mix()         { docker_compose exec server ash -c "cd /pleroma && mix $*"; }
-action__passthrough() { docker_compose $*; }
-action__p()           { action__passthrough $*; }
+download_file() { # $1: source, $2: target
+    if has_command curl; then
+        curl -sSL "$1" -o "$2"
+    elif has_command wget; then
+        wget "$1" -O "$2"
+    else
+        printf "\nError: This action requires either curl or wget in your PATH.\n"
+        exit 1
+    fi
+}
 
-action__restart()     { action__stop; action__start; }
+request_file_content() { # $1: source
+    if has_command curl; then
+        curl -sSL "$1"
+    elif has_command wget; then
+        wget "$1" -O- 2>/dev/null
+    else
+        printf "\nError: This action requires either curl or wget in your PATH.\n"
+        exit 1
+    fi
+}
 
-action__start()       { docker_compose up --remove-orphans -d; }
-action__up()          { action__start; }
+#########################################################
+# Subcommands                                           #
+#########################################################
 
-action__stop()        { docker_compose down; }
-action__down()        { action__stop; }
+action__build() {
+    local cacheTag=""
 
-action__status()      { docker_compose ps; }
-action__ps()          { action__status; }
+    # Alternative 1: Get tags or branches from git (if installed)
+    if [[ -z "$cacheTag" ]] && has_command git; then
+        set +o pipefail
+        local resolvedHash
+        resolvedHash="$(git ls-remote $GITLAB_URI/$ENDPOINT_REPO | grep "/$PLEROMA_VERSION" | awk '{ print $1 }')"
+        set -o pipefail
 
-###
-# This function rips out the mix caches from the container
-# in order to speed up rebuilds during debugging/modding sessions.
-# To persist the changes, the user still needs to rebuild the container.
-###
+        if [[ -n "$resolvedHash" ]]; then
+            cacheTag="$resolvedHash"
+        fi
+    fi
+
+    # Alternative 2: Current time with date or awk
+    if [[ -z "$cacheTag" ]] && has_command date; then
+        cacheTag="$(date '+%s')"
+    fi
+
+    if [[ -z "$cacheTag" ]] && has_command awk; then
+        cacheTag="$(awk 'BEGIN { srand(); print srand() }')"
+    fi
+
+    # Last resort: Constant value, user will need to run `docker system prune`
+    if [[ -z "$cacheTag" ]]; then
+        echo ""
+        echo "Warning: Cannot set a reliably unique cache tag."
+        echo "         You may be running outdated code!"
+        echo ""
+
+        cacheTag="broken-host-env"
+    fi
+
+    docker_compose build --build-arg __CACHE_TAG="$cacheTag" server
+}
+
+action__dump() {
+    cat <(render_template)
+}
+
+action__enter() {
+    docker_compose exec server sh -c 'cd ~/pleroma && bash'
+}
+
+action__logs() {
+    docker_compose logs "$@"
+}
+
+action__mix() {
+    docker_compose exec server sh -c "cd ~/pleroma && mix $*"
+}
+
+action__passthrough() {
+    docker_compose "$@"
+}
+
+action__p() {
+    action__passthrough "$@"
+}
+
+action__restart() {
+    action__stop
+    action__start
+}
+
+action__start() {
+    docker_compose up --remove-orphans -d
+}
+
+action__up() {
+    action__start
+}
+
+action__stop() {
+    docker_compose down
+}
+
+action__down() {
+    action__stop
+}
+
+action__status() {
+    docker_compose ps
+}
+
+action__ps() {
+    action__status
+}
+
 action__debug() {
-    debug_mounts="-v $(pwd)/custom.d:/custom.d -v $(pwd)/debug.d/build:/home/pleroma/pleroma/_build -v $(pwd)/debug.d/deps:/home/pleroma/pleroma/deps"
+    require_command xhost
+
+    local debug_mounts
+    debug_mounts="
+        -v $(pwd)/custom.d:/custom.d \
+        -v $(pwd)/debug.d/build:/home/pleroma/pleroma/_build \
+        -v $(pwd)/debug.d/deps:/home/pleroma/pleroma/deps \
+    "
 
     if [[ ! -d ./debug.d ]]; then
         mkdir -p ./debug.d/{build,deps}
@@ -127,23 +220,129 @@ action__debug() {
 
     action__stop
 
-    docker_compose run --rm -u pleroma -w /home/pleroma/pleroma $debug_mounts server bash -c 'cp -rvf /custom.d/* /home/pleroma/pleroma && mix deps.get'
+    docker_compose run --rm -u pleroma -w /home/pleroma/pleroma "$debug_mounts" server bash -c 'cp -rvf /custom.d/* /home/pleroma/pleroma && mix deps.get'
 
-    x_flags=""
+    local x_flags=""
     if [[ $NO_X_FORWARDING != 1 ]]; then
         x_flags="-e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix"
     fi
 
     [[ $NO_X_FORWARDING == 1 ]] || xhost +local:root
-    docker_compose run --rm -u pleroma -w /home/pleroma/pleroma $debug_mounts $x_flags server bash -c "cp -rvf /custom.d/* /home/pleroma/pleroma && $*"
+    docker_compose run --rm -u pleroma -w /home/pleroma/pleroma "$debug_mounts" "$x_flags" server bash -c "cp -rvf /custom.d/* /home/pleroma/pleroma && $*"
     [[ $NO_X_FORWARDING == 1 ]] || xhost -local:root
 }
 
 action__mod() {
-    echo "Preparing 'custom.d/$1' for modding..."
-    install -D <(echo '') ./custom.d/$1
-    wget -O ./custom.d/$1 https://git.pleroma.social/pleroma/pleroma/raw/$PLEROMA_VERSION/$1
+    require_command dialog
+    require_command jq
+    require_command curl
+
+    if [[ ! -d ./debug.d ]]; then
+        mkdir ./debug.d
+    fi
+
+    if [[ ! -f ./debug.d/mod_files.json ]] || [[ -n "$(find ./debug.d/mod_files.json -mmin +5)" ]]; then
+        curl -sSL -# "$GITLAB_URI/$ENDPOINT_LIST/$PLEROMA_VERSION?format=json" > ./debug.d/mod_files.json
+
+        if [[ -f ./debug.d/mod_files.lst ]]; then
+            rm ./debug.d/mod_files.lst
+        fi
+
+        jq -r 'map("\(.)\n") | add' <./debug.d/mod_files.json >./debug.d/mod_files.lst
+    fi
+
+    if [[ -f ./debug.d/mod_files.lst ]] && [[ -r ./debug.d/mod_files.lst ]]; then
+        choices=""
+
+        while read -r candidate; do
+            choices="$choices $candidate $(echo "$candidate" | rev | cut -d/ -f1 | rev)"
+        done <<< "$(grep -E ".*$1.*" <./debug.d/mod_files.lst)"
+
+        res=$(mktemp)
+        dialog --menu "Select the file you want to modify:" 35 80 30 $choices 2>"$res"
+        choice=$(cat "$res")
+
+        install -D <(echo '') "./custom.d/$choice"
+        curl -sSL -# "$GITLAB_URI/$ENDPOINT_FILE/$PLEROMA_VERSION/$choice" > "./custom.d/$choice"
+    else
+        install -D <(echo '') "./custom.d/$1"
+        curl -sSL -# "$GITLAB_URI/$ENDPOINT_FILE/$PLEROMA_VERSION/$1" > "./custom.d/$1"
+    fi
 }
+
+action__cp() {
+    container="$(docker_compose ps -q server)"
+
+    echo "$container:$1 -> $2"
+    docker cp "$container:$1" "$2"
+}
+
+#########################################################
+# Help                                                  #
+#########################################################
+
+print_help() {
+    echo "
+Pleroma Maintenance Script
+
+Usage:
+    $0 [action] [action-args...]
+
+Actions:
+    build                        (Re)build the pleroma container.
+
+    dump                         Dump the generated docker-compose.yml to stdout.
+
+    debug [bin] [args...]        Launches a new pleroma container but uses \$bin instead of phx.server as entrypoint.
+                                 **Warning**: This is intended for debugging pleroma with tools like :debugger and :observer.
+                                 It thus forwards your X-Server into docker and temporarily fiddles with your xhost
+                                 access controls. If this is a security concern for you, please export NO_X_FORWARDING=1
+                                 before launching a debugger session.
+
+    enter                        Spawn a shell inside the container for debugging/maintenance.
+                                 This command does not link to the postgres container.
+                                 If you need that use #debug instead.
+
+    logs                         Show the current container logs.
+
+    mix [task] [args...]         Run a mix task without entering the container.
+
+    mod [file]                   Creates the file in custom.d and downloads the content from pleroma.social.
+                                 The download respects your \$PLEROMA_VERSION from .env.
+
+    passthrough / p [...]        Pass any custom command to docker-compose.
+
+    restart                      Executes #stop and #start respectively.
+
+    start / up                   Start pleroma and sibling services.
+
+    stop / down                  Stop pleroma and sibling services.
+
+    status / ps                  Show the current container status.
+
+    copy / cp [source] [target]  Copy a file from your pc to the pleroma container.
+                                 This operation only works in one direction.
+                                 For making permanent changes to the container use custom.d.
+
+Environment:
+    DEBUG can be used to modify the loglevel.
+        DEBUG=1 prints all commands before they are executed.
+        DEBUG=2 prints all bash statements before they are executed (a lot).
+
+    SHOPT can be used to modify shell options.
+        Pass a list of options to this variable like SHOPT='-x -e'.
+        For setting long options with -o use a colon (:) instead of a space
+        to seperate the option from -o. For example: SHOPT='-x -e -o:pipefail'.
+
+Contributing:
+    You can report bugs or contribute to this project at:
+        https://glitch.sh/sn0w/pleroma-docker
+"
+}
+
+#########################################################
+# Main                                                  #
+#########################################################
 
 # Check if there is any command at all
 if [[ -z "$1" ]]; then
@@ -152,18 +351,18 @@ if [[ -z "$1" ]]; then
 fi
 
 # Check for SHOPTs
-if [[ ! -z "$SHOPT" ]]; then
+if [[ -n "$SHOPT" ]]; then
     for opt in $SHOPT; do
         if [[ $opt =~ ":" ]]; then
-            set -o ${opt//-o:/}
+            set -o "${opt//-o:/}"
         else
-            set $opt
+            set "$opt"
         fi
     done
 fi
 
 # Check for DEBUG
-if [[ ! -z "$DEBUG" ]]; then
+if [[ -n "$DEBUG" ]]; then
     if [[ $DEBUG == 1 ]]; then
         export DEBUG_COMMANDS=1
     elif [[ $DEBUG == 2 ]]; then
@@ -171,19 +370,36 @@ if [[ ! -z "$DEBUG" ]]; then
     fi
 fi
 
+# Check if the option is "help"
+case "$1" in
+    "help"|"h"|"--help"|"-h"|"-?")
+        print_help
+        exit 0
+    ;;
+esac
+
+# Check if the called command exists
+func="action__${1}"
+if ! type -t "$func" 1>/dev/null 2>&1; then
+    echo "Unknown flag or subcommand."
+    echo "Try '$0 help'"
+    exit 1
+fi
+
+# Fail if mandatory files are missing
+require_file ".env" ".env.dist"
+require_file "config.exs" "config.dist.exs"
+throw_file_errors
+
 # Parse .env
 load_env
 
-# Guess function name of current command
-# and then check for it's existance.
-func="action__${1}"
+# Handle DEBUG=2
+[[ $DEBUG != 1 ]] || set -x
 
-if type -t $func 2>&1 1>/dev/null; then
-    shift
-    [[ $DEBUG != 1 ]] || set -x
-    $func $@
-    { [[ $DEBUG != 1 ]] || set +x; } 2>/dev/null
-else
-    print_help
-    exit 1
-fi
+# Jump to called function
+shift
+$func "$@"
+
+# Disable debug mode
+{ [[ $DEBUG != 1 ]] || set +x; } 2>/dev/null

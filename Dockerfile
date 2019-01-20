@@ -1,67 +1,60 @@
-FROM debian:9-slim
+FROM alpine:3.8
 
-VOLUME /custom.d
-EXPOSE 4000
-
-ENV DEBIAN_FRONTEND=noninteractive
+# Set up environment
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
+ENV MIX_ENV=prod
 
-# Register pseudo-entrypoint
-ADD ./entrypoint.sh /
-RUN chmod a+x /entrypoint.sh
-CMD ["/entrypoint.sh"]
+# Prepare mounts
+VOLUME /custom.d
 
-# Set "real" entrypoint to an init system.
-# TODO: Replace with --init when docker 18.06 is GA
-ENV TINI_VERSION v0.18.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-RUN chmod +x /tini
-ENTRYPOINT ["/tini", "--"]
+# Expose default pleroma port to host
+EXPOSE 4000
 
-# Get build dependencies
+# Get dependencies
 RUN \
-       apt-get update \
-    && apt-get install -y --no-install-recommends apt-utils \
-    && apt-get install -y --no-install-recommends git wget ca-certificates gnupg2 build-essential \
+    apk add --no-cache --virtual .tools \
+        git curl rsync postgresql-client \
     \
-    && wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb \
-    && dpkg -i erlang-solutions_1.0_all.deb \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends esl-erlang elixir \
+    && apk add --no-cache --virtual .sdk \
+        build-base \
     \
-    && rm -rf /var/lib/apt/lists/*
+    && apk add --no-cache --virtual .runtime \
+        erlang erlang-runtime-tools erlang-xmerl elixir
+
+# Add entrypoint
+COPY ./entrypoint.sh /
+RUN chmod a+x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
 
 # Limit permissions
-ARG DOCKER_UID
-ARG DOCKER_GID
-ARG PLEROMA_UPLOADS_PATH
+ARG DOCKER_UID=1000
+ARG DOCKER_GID=1000
+ARG PLEROMA_UPLOADS_PATH=/uploads
 
 RUN \
-       groupadd --gid ${DOCKER_GID} pleroma \
-    && useradd -m -s /bin/bash --gid ${DOCKER_GID} --uid ${DOCKER_UID} pleroma \
+       addgroup --gid ${DOCKER_GID} pleroma \
+    && adduser -S -s /bin/ash -G pleroma -u ${DOCKER_UID} pleroma \
     && mkdir -p /custom.d $PLEROMA_UPLOADS_PATH \
     && chown -R pleroma:pleroma /custom.d $PLEROMA_UPLOADS_PATH
 
 USER pleroma
 WORKDIR /home/pleroma
 
-# Get pleroma
+# Get pleroma sources
 RUN git clone --progress https://git.pleroma.social/pleroma/pleroma.git ./pleroma
 WORKDIR /home/pleroma/pleroma
 
-# Get rebar/hex
-RUN \
-       mix local.hex --force \
-    && mix local.rebar --force
-
-# Bust the build cache
-ARG __BUST_CACHE
-ENV __BUST_CACHE $__BUST_CACHE
+# Bust the build cache (if needed)
+# This works by setting an environment variable with the last
+# used version/branch/tag/commitish/... which originates in the script.
+# If the host doesn't have the required tool for "smart version detection"
+# we'll just use the current timestamp here which forces a rebuild every time.
+ARG __CACHE_TAG
+ENV __CACHE_TAG $__CACHE_TAG
 
 # Fetch changes, checkout
 ARG PLEROMA_VERSION
-
 RUN \
        git fetch --all \
     && git checkout $PLEROMA_VERSION \
@@ -69,12 +62,9 @@ RUN \
 
 # Precompile
 RUN \
-       mix deps.get \
-    && mix compile
+    cp ./config/dev.exs ./config/prod.secret.exs \
+    && BUILDTIME=1 /entrypoint.sh \
+    && rm ./config/prod.secret.exs
 
-# Insert overrides and config helper
-COPY --chown=pleroma:pleroma ./docker-config.exs /docker-config.exs
+# Insert overrides
 COPY --chown=pleroma:pleroma ./custom.d /home/pleroma/pleroma
-RUN \
-       ln -s /docker-config.exs config/prod.secret.exs \
-    && ln -s /docker-config.exs config/dev.secret.exs

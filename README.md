@@ -12,30 +12,22 @@ This repository dockerizes it for easier deployment.
 <hr>
 
 ```cpp
-#include <public_domain.h>
-#include <std_disclaimer.h>
+#include <LICENSE>
 
 /*
  * This repository comes with ABSOLUTELY NO WARRANTY
  *
  * I am not responsible for burning servers, angry users, fedi drama,
- * thermonuclear war, or you getting fired because your boss saw your
- * NSFW posts. Please do some research if you have any concerns about included
- * features or the software used by this script before using it.
+ * thermonuclear war, or you getting fired because your boss saw your NSFW posts.
+ * Please do some research if you have any concerns about included
+ * features or the software used by this script ***before*** using it.
+ *
  * You are choosing to use this setup, and if you point the finger at me for
  * messing up your instance, I will laugh at you.
  */
 ```
 
 <hr>
-
-## Features
-
-- 100% generic
-- Everything is customizable
-- Zero special host dependencies
-- Configuration is not compile-time
-- "It just works"
 
 ## Alternatives
 
@@ -46,104 +38,110 @@ or guides from the community. A few are linked below. This list is not exhaustiv
 - [RX14/iscute.moe](https://github.com/RX14/kurisu.rx14.co.uk/blob/master/services/iscute.moe/pleroma/Dockerfile)
 - [rysiek/docker-pleroma](https://git.pleroma.social/rysiek/docker-pleroma)
 
-## Installing Pleroma
+## Docs
+
+### Prerequisites
+
+- 500mb of free HDD space
+- `m4` and `awk` in remotely recent versions
+- `curl` or `wget` if you want smarter build caches and commands like `./pleroma mod`
+- `jq` and `dialog` if you want to use `./pleroma mod`
+- Bash 4.0+ (fancy scripting stuff)
+- Docker 18.06.0+ and docker-compose 1.22.0-rc1+ (We need compose file format 3.7+ for `init:`)
+
+### Installation
 
 - Clone this repository
-- Copy `.env.dist` to `.env`
-- Edit `.env` (see "Configuring Pleroma" section below)
-- Run `./pleroma build` and `./pleroma start`
+- Create a `config.exs` and `.env` file
+- Run `./pleroma build` and `./pleroma up`
 - Profit!
 
-## Updating Pleroma
+### Updates
 
-Just run `./pleroma build` again and `./pleroma start` afterwards.
+Run `./pleroma build` again and start the updated image with `./pleroma up`.
 
-You don't need to shutdown pleroma while compiling the new release.
+You don't need to stop your pleroma server for either of those commands.
 
-Every time you run `./pleroma build` the script will fetch all upstream changes and checkout `PLEROMA_VERSION`.
-This means that setting `PLEROMA_VERSION` to a branch enables rolling-release updates while setting
-it to a tag or commit-hash pins the version.
+### Maintenance
 
-## Maintaining Pleroma
+Pleroma maintenance is usually done with mix tasks.
+You can run these tasks in your running pleroma server using `./pleroma mix [task] [arguments...]`.
+If you need to fix some bigger issues you can also spawn a shell with `./pleroma enter`.
 
-Pleroma maintenance is usually done with premade mix tasks.<br>
-You can run these tasks using `./pleroma mix [task] [arguments...]`.<br>
-If you need to fix some bigger issues you can also spawn a shell using `./pleroma enter`.
+### Customization
 
-## Customizing Pleroma
+Add your customizations (and their folder structure) to `custom.d/`.
+They will be mounted and symlinked into the right place when the container starts.
+You can even replace/patch pleroma’s code with this, because the project is recompiled at startup if needed.
 
-Just add your customizations (and their folder structure) to `custom.d`.<br>
-They will be mounted and symlinked into the right place when the container starts.<br>
-You can even replace/patch pleroma's code with this, because the project is recompiled at startup.<br>
-
-In general: Prepending `custom.d/` to pleroma's customization guides should work all the time.<br>
-Check them out in the [official pleroma wiki](https://git.pleroma.social/pleroma/pleroma/wikis/home).
+In general: Prepending `custom.d/` to pleroma’s customization guides should work all the time.<br>
+Check them out in the official pleroma wiki.
 
 For example: A custom thumbnail now goes into `custom.d/priv/static/instance/thumbnail.jpeg` instead of `priv/static/instance/thumbnail.jpeg`.
 
-Note: Since `custom.d` needs to be accessible at runtime by the pleroma process, the container will automatically chown these files to `$UID:$GID` from your `.env` file.
+### Patches
 
-## Configuring Pleroma
+Works exactly like customization, but we have a neat little helper here.
 
-pleroma-docker tries to stay out of your way as much as possible while providing
-a good experience for both you and your users. It thus supports multiple
-"operation modes" and quite some config variables which you can mix and match.
+Use `./pleroma mod [regex]` to mod any file that ships with pleroma, without having to type the complete path.<br>
 
-This guide will explain some of the tricky `.env` file parts as detailed as possible (but you should still read the comments in there).
+### Configuration
 
-Since this setup [injects code](https://glitch.sh/sn0w/pleroma-docker/blob/master/docker-config.exs) into pleroma that moves it's configuration into the environment (ref ["The Twelve-Factor App"](https://12factor.net/)),
-the built image is 100% reusable and can be shared/replicated across multiple hosts.
-To do that just run `./pleroma build` as usual and then tag your image to whatever you want.
-Just make sure to start the replicated container with `env_file:` or all required `-e` pairs.
+All the pleroma options that you put into your `*.secret.exs` now go into `config.exs`.
 
-#### Storing Data
+`.env` stores config values that need to be known at orchestration time.<br>
+They should be self-explaining but here's some bonus info on important ones:
 
-Currently all data is stored in subfolders of `DOCKER_DATADIR` which will be bind-mounted into the container by docker.
+#### Data Storage (`DOCKER_DATADIR`)
 
-We'll evaluate named volumes as an option in the future but they're currently not supported.
+A folder that will be bind-mounted into the container.<br>
+This is where pleroma and postgres will store their data.
 
 #### Database (`SCRIPT_DEPLOY_POSTGRES`)
 
 Values: `true` / `false`
 
-By default pleroma-docker deploys a postgresql container and links it to pleroma's container as a zero-config data store. If you already have a postgres database or want to host postgres on a physically different machine set this value to `false`. Make sure to set the `POSTGRES_*` variables when doing that.
+By default pleroma-docker deploys a postgresql container and links it to pleroma’s container as a zero-config data store.
+If you already have a postgres database or want to host it on a physically different machine, set this value to `false`.
+Make sure to edit the `config :pleroma, Pleroma.Repo` variables when doing that.
 
 #### Reverse Proxy (`SCRIPT_USE_PROXY`)
 
 Values: `traefik` / `nginx` / `manual`
 
-Pleroma is usually run behind a reverse-proxy.
+Pleroma is usually run behind a reverse-proxy.<br>
 Pleroma-docker gives you multiple options here.
 
 ##### Traefik
 
-In traefik-mode we will generate a pleroma container with traefik labels.
-These will be picked up at runtime to dynamically create a reverse-proxy
-configuration. This should 'just work' if `watch=true` and `exposedByDefault=false` are set in the `[docker]` section of your `traefik.conf`. SSL will also 'just work' once you add a matching `[[acme.domains]]` entry.
+In traefik-mode we will generate a pleroma container with traefik-compatible labels.
+These will be picked up at runtime to dynamically create a reverse-proxy configuration.
+This should 'just work' if `watch=true` and `exposedByDefault=false` are set in the `[docker]` section of your `traefik.conf`.
+SSL will also 'just work' once you add a matching `[[acme.domains]]` entry in there.
 
 ##### NGINX
 
-In nginx-mode we will generate a bare nginx container that is linked to the
-pleroma container. The nginx container is absolutely unmodified and expects to
-be configured by you. The nginx file in [Pleroma's Repository](https://git.pleroma.social/pleroma/pleroma/blob/develop/installation/pleroma.nginx) is a good starting point.
+In nginx-mode we will generate a bare nginx container that is linked to pleroma.
+The nginx container is absolutely unmodified and expects to be configured by you.
+The nginx file in [Pleroma's Repository](https://git.pleroma.social/pleroma/pleroma/blob/develop/installation/pleroma.nginx) is a good starting point.
 
 We will mount your configs like this:
-```
+```txt
 custom.d/server.nginx -> /etc/nginx/nginx.conf
 custom.d/vhost.nginx -> /etc/nginx/conf.d/pleroma.conf
 ```
 
 To reach your pleroma container from inside nginx use `proxy_pass http://pleroma:4000;`.
 
-Set `SCRIPT_PORT_HTTP` and `SCRIPT_PORT_HTTPS` to the ports you want to listen on.
+Set `SCRIPT_PORT_HTTP` and `SCRIPT_PORT_HTTPS` to the ports you want to listen on.<br>
 Specify the ip to bind to in `SCRIPT_BIND_IP`. These values are required.
 
 The container only listens on `SCRIPT_PORT_HTTPS` if `SCRIPT_ENABLE_SSL` is `true`.
 
 ##### Apache / httpd
 
-Just like nginx-mode this starts an unmodified apache server that expects to be
-configured by you. Again [Pleroma's Config](https://git.pleroma.social/pleroma/pleroma/blob/develop/installation/pleroma-apache.conf) is a good starting point.
+Just like nginx-mode this starts an unmodified apache server that expects to be configured by you.<br>
+Again [Pleroma's Config](https://git.pleroma.social/pleroma/pleroma/blob/develop/installation/pleroma-apache.conf) is a good starting point.
 
 We will mount your configs like this:
 ```
@@ -162,8 +160,9 @@ The container only listens on `SCRIPT_PORT_HTTPS` if `SCRIPT_ENABLE_SSL` is `tru
 In manual mode we do not create any reverse proxy for you.
 You'll have to figure something out on your own.
 
-This mode also doesn't bind to any IP or port.
-You'll have to forward something to the container's IP.
+If `SCRIPT_BIND_IN_MANUAL` is `true` we will forward `pleroma:4000` to `${SCRIPT_BIND_IP}:${SCRIPT_PORT_HTTP}`.
+
+**Pleroma's internal SSL implementation is currently not supported.**
 
 #### SSL (`SCRIPT_ENABLE_SSL`)
 
