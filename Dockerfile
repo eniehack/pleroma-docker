@@ -1,4 +1,4 @@
-FROM alpine:3.8
+FROM alpine:3.9
 
 # Set up environment
 ENV LC_ALL=C.UTF-8
@@ -20,10 +20,7 @@ RUN \
         build-base \
     \
     && apk add --no-cache --virtual .runtime \
-        --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main \
-        --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community \
-        --force-overwrite \
-        erlang erlang-runtime-tools erlang-xmerl elixir
+        erlang erlang-runtime-tools erlang-xmerl erlang-ssl erlang-eldap elixir
 
 # Add entrypoint
 COPY ./entrypoint.sh /
