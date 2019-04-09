@@ -20,7 +20,7 @@ RUN \
         build-base \
     \
     && apk add --no-cache --virtual .runtime \
-        erlang erlang-runtime-tools erlang-xmerl erlang-ssl erlang-eldap elixir
+        imagemagick erlang erlang-runtime-tools erlang-xmerl erlang-ssl erlang-eldap elixir
 
 # Add entrypoint
 COPY ./entrypoint.sh /
