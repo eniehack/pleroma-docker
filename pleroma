@@ -114,7 +114,7 @@ action__build() {
     local cacheTag=""
 
     # Alternative 1: Get tags or branches from git (if installed)
-    if [[ -z "$cacheTag" ]] && has_command git; then
+    if [[ -z "$cacheTag" ]] && has_command git && has_command grep && has_command awk; then
         set +o pipefail
         local resolvedHash
         resolvedHash="$(git ls-remote $GITLAB_URI/$ENDPOINT_REPO | grep "/$PLEROMA_VERSION" | awk '{ print $1 }')"
@@ -125,24 +125,67 @@ action__build() {
         fi
     fi
 
-    # Alternative 2: Current time with date or awk
+    # Alternative 2: Current time
     if [[ -z "$cacheTag" ]] && has_command date; then
+        echo ""
+        echo "WARNING WARNING WARNING"
+        echo ""
+        echo "You don't have git installed, so we cannot know if the cache is up to date."
+        echo "We'll use the current unix timestamp as a replacement value,"
+        echo "but this means that your cache is always 'stale' and docker wastes your time."
+        echo ""
+        echo "WARNING WARNING WARNING"
+        echo ""
+        echo "Waiting 5 seconds to make sure you notice this..."
+        sleep 5
+
         cacheTag="$(date '+%s')"
     fi
 
-    if [[ -z "$cacheTag" ]] && has_command awk; then
-        cacheTag="$(awk 'BEGIN { srand(); print srand() }')"
+    # Alternative 3: Random number with awk
+    if [[ -z "$cacheTag" ]] && [[ -n "$RANDOM" ]]; then
+        echo ""
+        echo "WARNING WARNING WARNING"
+        echo ""
+        echo "You don't have git installed, so we cannot know if the cache is up to date."
+        echo "Additionally you don't have \`date\` available. (What kind of pc is this?!)"
+        echo "This means we cannot set any unique value as cache tag."
+        echo ""
+        echo "We'll generate a random number to try and mark the cache as 'always stale'."
+        echo "Hoewever: Depending on your shell this might not always work, or only work a few times."
+        echo ""
+        echo "You should *really* get this fixed unless you know what you're doing."
+        echo ""
+        echo "WARNING WARNING WARNING"
+        echo ""
+        echo "Waiting 5 seconds to make sure you notice this..."
+        sleep 5
+
+        cacheTag="$RANDOM"
     fi
 
-    # Last resort: Constant value, user will need to run `docker system prune`
+    # Last resort: Constant value
     if [[ -z "$cacheTag" ]]; then
         echo ""
-        echo "Warning: Cannot set a reliably unique cache tag."
-        echo "         You may be running outdated code!"
+        echo "WARNING WARNING WARNING"
         echo ""
+        echo "You don't have git installed, so we cannot know if the cache is up to date."
+        echo "Additionally you don't have \`date\` available, and your shell refuses to generate random numbers."
+        echo "This means we cannot set any unique or random value as cache tag."
+        echo "Consequently your cache will always be 'fresh' and you never get updates."
+        echo ""
+        echo "You can work around this by running \`docker system prune\` to throw away the build cache,"
+        echo "but you should *really* get this fixed unless you know what you're doing."
+        echo ""
+        echo "WARNING WARNING WARNING"
+        echo ""
+        echo "Waiting 5 seconds to make sure you notice this..."
+        sleep 5
 
         cacheTag="broken-host-env"
     fi
+
+    echo -e "#> (Re-)Building with cache tag \`${cacheTag}\`...\n"
 
     docker_compose build --build-arg __CACHE_TAG="$cacheTag" server
 }
