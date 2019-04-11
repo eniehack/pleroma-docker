@@ -31,18 +31,25 @@ or guides from the community. A few are linked below. This list is not exhaustiv
 
 - [Angristan/dockerfiles/pleroma](https://github.com/Angristan/dockerfiles/tree/master/pleroma)
 - [RX14/iscute.moe](https://github.com/RX14/kurisu.rx14.co.uk/blob/master/services/iscute.moe/pleroma/Dockerfile)
-- [rysiek/docker-pleroma](https://git.pleroma.social/rysiek/docker-pleroma)
+
+## In the Wild
+
+My own instance is managed by this script.<br>
+Take a look at [hosted/pleroma](https://glitch.sh/hosted/pleroma) if you get stuck or need some inspiration.
+
+Does your instance use pleroma-docker?<br>
+Let me know and I'll add you to this list.
 
 ## Docs
 
 ### Prerequisites
 
-- 500mb of free HDD space
+- ~500mb of free HDD space
 - `m4` and `awk` in remotely recent versions
-- `git`, `curl`, or `wget` if you want smarter build caches and commands like `./pleroma mod`
-- `jq` and `dialog` if you want to use `./pleroma mod`
+- `git` if you want smart build caches
+- `curl`, `jq`, and `dialog` if you want to use `./pleroma mod`
 - Bash 4.0+ (fancy scripting stuff)
-- Docker 18.06.0+ and docker-compose 1.22.0-rc1+ (We need compose file format 3.7+ for `init:`)
+- Docker 18.06+ and docker-compose 1.22+
 
 ### Installation
 
@@ -63,26 +70,29 @@ Pleroma maintenance is usually done with mix tasks.
 You can run these tasks in your running pleroma server using `./pleroma mix [task] [arguments...]`.
 If you need to fix some bigger issues you can also spawn a shell with `./pleroma enter`.
 
+For example: `/pleroma mix pleroma.user new sn0w ...`
+
 ### Customization
 
-Add your customizations (and their folder structure) to `custom.d/`.
-They will be copied into the right place when the container starts.
-You can even replace/patch pleroma’s code with this, because the project is recompiled at startup if needed.
+Add your customizations (and their folder structure) to `custom.d/`.<br>
+They will be copied into the right place when the container starts.<br>
+You can even replace/patch pleroma’s code with this,<br>
+because the project is recompiled at startup if needed.
 
 In general: Prepending `custom.d/` to pleroma’s customization guides should work all the time.<br>
 Check them out in the official pleroma wiki.
 
-For example: A custom thumbnail now goes into `custom.d/priv/static/instance/thumbnail.jpeg` instead of `priv/static/instance/thumbnail.jpeg`.
+For example: A custom thumbnail now goes into `custom.d/` + `priv/static/instance/thumbnail.jpeg`.
 
 ### Patches
 
 Works exactly like customization, but we have a neat little helper here.
 
-Use `./pleroma mod [regex]` to mod any file that ships with pleroma, without having to type the complete path.<br>
+Use `./pleroma mod [regex]` to mod any file that ships with pleroma, without having to type the complete path.
 
 ### Configuration
 
-All the pleroma options that you put into your `*.secret.exs` now go into `config.exs`.
+All the pleroma options that you usually put into your `*.secret.exs` now go into `config.exs`.
 
 `.env` stores config values that need to be known at orchestration time.<br>
 They should be self-explaining but here's some bonus info on important ones:
@@ -106,6 +116,13 @@ Values: `traefik` / `nginx` / `apache` / `manual`
 
 Pleroma is usually run behind a reverse-proxy.<br>
 Pleroma-docker gives you multiple options here.
+
+##### Manual
+
+In manual mode we do not create any reverse proxy for you.<br>
+You'll have to figure something out on your own.
+
+If `SCRIPT_BIND_IN_MANUAL` is `true` we will forward `pleroma:4000` to `${SCRIPT_BIND_IP}:${SCRIPT_PORT_HTTP}`.
 
 ##### Traefik
 
@@ -149,13 +166,6 @@ To reach your pleroma container from inside apache use `ProxyPass [loc] http://p
 Again setting `SCRIPT_PORT_HTTP`, `SCRIPT_PORT_HTTPS` and `SCRIPT_BIND_IP` is required.
 
 The container only listens on `SCRIPT_PORT_HTTPS` if `SCRIPT_ENABLE_SSL` is `true`.
-
-##### Manual
-
-In manual mode we do not create any reverse proxy for you.
-You'll have to figure something out on your own.
-
-If `SCRIPT_BIND_IN_MANUAL` is `true` we will forward `pleroma:4000` to `${SCRIPT_BIND_IP}:${SCRIPT_PORT_HTTP}`.
 
 #### SSL (`SCRIPT_ENABLE_SSL`)
 
