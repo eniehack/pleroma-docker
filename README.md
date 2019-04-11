@@ -24,14 +24,6 @@ This repository dockerizes it for easier deployment.
 
 <hr>
 
-## Alternatives
-
-If this setup is a bit overwhelming there are a lot of other great dockerfiles
-or guides from the community. A few are linked below. This list is not exhaustive and not ordered.
-
-- [Angristan/dockerfiles/pleroma](https://github.com/Angristan/dockerfiles/tree/master/pleroma)
-- [RX14/iscute.moe](https://github.com/RX14/kurisu.rx14.co.uk/blob/master/services/iscute.moe/pleroma/Dockerfile)
-
 ## In the Wild
 
 My own instance is managed by this script.<br>
@@ -41,6 +33,12 @@ Does your instance use pleroma-docker?<br>
 Let me know and I'll add you to this list.
 
 ## Docs
+
+These docs assume that you have at least a basic understanding
+of the pleroma installation process and common docker commands.
+
+If you have questions about Pleroma head over to https://docs-develop.pleroma.social/.<br>
+For help with docker check out https://docs.docker.com/.
 
 ### Prerequisites
 
@@ -76,7 +74,7 @@ For example: `/pleroma mix pleroma.user new sn0w ...`
 
 Add your customizations (and their folder structure) to `custom.d/`.<br>
 They will be copied into the right place when the container starts.<br>
-You can even replace/patch pleroma’s code with this,<br>
+You can even replace/patch pleroma’s code with this,
 because the project is recompiled at startup if needed.
 
 In general: Prepending `custom.d/` to pleroma’s customization guides should work all the time.<br>
@@ -198,3 +196,10 @@ ssl_certificate_key /ssl/ssl.key;
 ```
 
 In traefik-mode and manual-mode these files and the `SCRIPT_ENABLE_SSL` value are ignored.
+
+## Attribution
+
+Thanks to [Angristan](https://github.com/Angristan/dockerfiles/tree/master/pleroma) and [RX14](https://github.com/RX14/kurisu.rx14.co.uk/blob/master/services/iscute.moe/pleroma/Dockerfile) for their dockerfiles, which served as an inspiration for the early versions of this script.
+
+The current version is based on the [official wiki guides](https://git.pleroma.social/pleroma/pleroma/tree/develop/docs/installation).<br>
+Thanks to all people who contributed to those.
