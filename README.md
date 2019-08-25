@@ -17,8 +17,6 @@ This repository dockerizes it for easier deployment.
  * Please do some research if you have any concerns about included
  * features or the software used by this script ***before*** using it.
  *
- * You are choosing to use this setup, and if you point the finger at me for
- * messing up your instance, I will laugh at you.
  */
 ```
 
@@ -40,35 +38,80 @@ of the pleroma installation process and common docker commands.
 If you have questions about Pleroma head over to https://docs-develop.pleroma.social/.<br>
 For help with docker check out https://docs.docker.com/.
 
+For other problems related to this script, contact me or open an issue :)
+
 ### Prerequisites
 
 - ~500mb of free HDD space
-- `m4` and `awk` in remotely recent versions
 - `git` if you want smart build caches
-- `curl`, `jq`, and `dialog` if you want to use `./pleroma mod`
-- Bash 4.0+ (fancy scripting stuff)
+- `curl`, `jq`, and `dialog` if you want to use `./pleroma.sh mod`
+- Bash 4+
 - Docker 18.06+ and docker-compose 1.22+
 
 ### Installation
 
 - Clone this repository
 - Create a `config.exs` and `.env` file
-- Run `./pleroma build` and `./pleroma up`
+- Run `./pleroma.sh build` and `./pleroma.sh up`
+- Configure a reverse-proxy
 - Profit!
+
+Hint:<br>
+You can also use normal `docker-compose` commands to maintain your setup.<br>
+The only command that you cannot use is `docker-compose build` due to build caching.
 
 ### Updates
 
-Run `./pleroma build` again and start the updated image with `./pleroma up`.
+Run `./pleroma.sh build` again and start the updated image with `./pleroma.sh up`.
 
 You don't need to stop your pleroma server for either of those commands.
 
 ### Maintenance
 
 Pleroma maintenance is usually done with mix tasks.
-You can run these tasks in your running pleroma server using `./pleroma mix [task] [arguments...]`.
-If you need to fix some bigger issues you can also spawn a shell with `./pleroma enter`.
+You can run these tasks in your running pleroma server using `./pleroma.sh mix [task] [arguments...]`.
+If you need to fix some bigger issues you can also spawn a shell with `./pleroma.sh enter`.
 
-For example: `/pleroma mix pleroma.user new sn0w ...`
+For example: `/pleroma.sh mix pleroma.user new sn0w ...`
+
+### My instance is up, how do I reach it?
+
+Older versions of this script contained a huge amount of scripting to support all kinds of reverse-proxy setups.<br>
+This newer version tries to focus only on providing good setup tooling.
+
+You will have to configure your own reverse-proxy.<br>
+You can use Caddy, Traefik, Apache, nginx, or whatever else you could come up with.<br>
+Just modify your `docker-compose.yml` accordingly.
+
+One example would be to add an [nginx server](https://hub.docker.com/_/nginx) to your `docker-compose.yml`:
+```yml
+  # ...
+
+  proxy:
+    image: nginx
+    init: true
+    restart: unless-stopped
+    links:
+      - server
+    volumes:
+      - ./my-nginx-config.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+      - "443:443"
+```
+
+Then take a look at [the pleroma nginx example](https://git.pleroma.social/pleroma/pleroma/blob/develop/installation/pleroma.nginx) for hints about what to put into `my-nginx-config.conf`.
+
+Using apache would work in a very similar way (see [Apache Docker Docs](https://hub.docker.com/_/httpd) and [the pleroma apache example](https://git.pleroma.social/pleroma/pleroma/blob/develop/installation/pleroma-apache.conf)).
+
+The target that you proxy to is called `http://server:4000/`.<br>
+This will work automagically when the proxy also lives inside of docker.
+
+Something that cofe.rocks uses is simple port-forwarding of the `server` container to the host's `127.0.0.1`.
+From there on, the natively installed nginx server acts as a proxy to the open internet.
+You can take a look at [this file](https://glitch.sh/hosted/pleroma/src/commit/4e88d93276f0bb2ef62d7f18477b156318924325/docker-compose.m4#L93) if that setup sounds interesting.
+
+If you need help with this, or if you think that this needs more documentation, please let me know.
 
 ### Customization
 
@@ -86,118 +129,16 @@ For example: A custom thumbnail now goes into `custom.d/` + `priv/static/instanc
 
 Works exactly like customization, but we have a neat little helper here.
 
-Use `./pleroma mod [regex]` to mod any file that ships with pleroma, without having to type the complete path.
+Use `./pleroma.sh mod [regex]` to mod any file that ships with pleroma, without having to type the complete path.
 
 ### Configuration
 
 All the pleroma options that you usually put into your `*.secret.exs` now go into `config.exs`.
 
-`.env` stores config values that need to be known at orchestration time.<br>
-They should be self-explaining but here's some bonus info on important ones:
+`.env` stores config values that need to be known at orchestration/build time.<br>
+Documentation for the possible values is inside of that file.
 
-#### Data Storage (`DOCKER_DATADIR`)
-
-A folder that will be bind-mounted into the container.<br>
-This is where pleroma and postgres will store their data.
-
-#### Database (`SCRIPT_DEPLOY_POSTGRES`)
-
-Values: `true` / `false`
-
-By default pleroma-docker deploys a postgresql container and links it to pleroma’s container as a zero-config data store.
-If you already have a postgres database or want to host it on a physically different machine, set this value to `false`.
-Make sure to edit the `config :pleroma, Pleroma.Repo` variables in `config.exs` when doing that.
-
-#### Reverse Proxy (`SCRIPT_USE_PROXY`)
-
-Values: `traefik` / `nginx` / `apache` / `manual`
-
-Pleroma is usually run behind a reverse-proxy.<br>
-Pleroma-docker gives you multiple options here.
-
-##### Manual
-
-In manual mode we do not create any reverse proxy for you.<br>
-You'll have to figure something out on your own.
-
-If `SCRIPT_BIND_IN_MANUAL` is `true` we will forward `pleroma:4000` to `${SCRIPT_BIND_IP}:${SCRIPT_PORT_HTTP}`.
-
-##### Traefik
-
-In traefik-mode we will generate a pleroma container with traefik-compatible labels.
-These will be picked up at runtime to dynamically create a reverse-proxy configuration.
-This should 'just work' if `watch=true` and `exposedByDefault=false` are set in the `[docker]` section of your `traefik.conf`.
-SSL will also 'just work' once you add a matching `[[acme.domains]]` entry in there.
-
-##### NGINX
-
-In nginx-mode we will generate a bare nginx container that is linked to pleroma.
-The nginx container is absolutely unmodified and expects to be configured by you.
-The nginx file in [Pleroma's Repository](https://git.pleroma.social/pleroma/pleroma/blob/develop/installation/pleroma.nginx) is a good starting point.
-
-We will mount your configs like this:
-```txt
-custom.d/server.nginx -> /etc/nginx/nginx.conf
-custom.d/vhost.nginx -> /etc/nginx/conf.d/pleroma.conf
-```
-
-To reach your pleroma container from inside nginx use `proxy_pass http://pleroma:4000;`.
-
-Set `SCRIPT_PORT_HTTP` and `SCRIPT_PORT_HTTPS` to the ports you want to listen on.<br>
-Specify the ip to bind to in `SCRIPT_BIND_IP`. These values are required.
-
-The container only listens on `SCRIPT_PORT_HTTPS` if `SCRIPT_ENABLE_SSL` is `true`.
-
-##### Apache / httpd
-
-Just like nginx-mode this starts an unmodified apache server that expects to be configured by you.<br>
-Again [Pleroma's Config](https://git.pleroma.social/pleroma/pleroma/blob/develop/installation/pleroma-apache.conf) is a good starting point.
-
-We will mount your configs like this:
-```
-custom.d/server.httpd -> /usr/local/apache2/conf/httpd.conf
-custom.d/vhost.httpd -> /usr/local/apache2/conf/extra/httpd-vhosts.conf
-```
-
-To reach your pleroma container from inside apache use `ProxyPass [loc] http://pleroma:4000/`.
-
-Again setting `SCRIPT_PORT_HTTP`, `SCRIPT_PORT_HTTPS` and `SCRIPT_BIND_IP` is required.
-
-The container only listens on `SCRIPT_PORT_HTTPS` if `SCRIPT_ENABLE_SSL` is `true`.
-
-#### SSL (`SCRIPT_ENABLE_SSL`)
-
-Values: `true` / `false`
-
-If you want to use SSL with your Apache or NGINX containers you'll need a
-certificate. Certificates need to be placed into `custom.d` and will be
-bind-mounted into the server's container at runtime.
-
-We will mount your certs like this:
-```
-custom.d/ssl.crt -> /ssl/ssl.crt
-custom.d/ssl.key -> /ssl/ssl.key
-```
-
-You can reference them in Apache like this:
-```apache
-<VirtualHost *:443>
-    SSLEngine on
-    SSLCertificateFile "/ssl/ssl.crt"
-    SSLCertificateKeyFile "/ssl/ssl.key"
-</VirtualHost>
-```
-
-And in NGINX like this:
-```nginx
-listen 443 ssl;
-ssl_certificate     /ssl/ssl.crt;
-ssl_certificate_key /ssl/ssl.key;
-```
-
-In traefik-mode and manual-mode these files and the `SCRIPT_ENABLE_SSL` value are ignored.
-
-## Attribution
+### Attribution
 
 Thanks to [Angristan](https://github.com/Angristan/dockerfiles/tree/master/pleroma) and [RX14](https://github.com/RX14/kurisu.rx14.co.uk/blob/master/services/iscute.moe/pleroma/Dockerfile) for their dockerfiles, which served as an inspiration for the early versions of this script.
 

@@ -1,4 +1,11 @@
-FROM alpine:3.9
+FROM alpine:3.10
+
+ARG __VIA_SCRIPT
+RUN \
+    if [ -z "$__VIA_SCRIPT" ]; then \
+        echo -e "\n\nERROR\nYou must build pleroma via build.sh\n\n"; \
+        exit 1; \
+    fi
 
 # Set up environment
 ENV LC_ALL=C.UTF-8
@@ -47,7 +54,7 @@ WORKDIR /home/pleroma/pleroma
 
 # Bust the build cache (if needed)
 # This works by setting an environment variable with the last
-# used version/branch/tag/commitish/... which originates in the script.
+# used version/branch/tag/commit/... which originates in the script.
 # If the host doesn't have the required tool for "smart version detection"
 # we'll just use the current timestamp here which forces a rebuild every time.
 ARG __CACHE_TAG

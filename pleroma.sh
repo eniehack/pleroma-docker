@@ -1,11 +1,6 @@
 #!/bin/bash
 
-#########################################################
-# Options                                               #
-#########################################################
-
-set -e
-set -o pipefail
+set -Eeo pipefail
 
 #########################################################
 # Globals                                               #
@@ -19,8 +14,6 @@ readonly ENDPOINT_LIST="pleroma/pleroma/files"
 readonly ENDPOINT_TAG="$PREFIX_API/tags"
 readonly ENDPOINT_BLOB="$PREFIX_API/blobs"
 readonly ENDPOINT_BRANCH="$PREFIX_API/branches"
-
-flags=""
 
 #########################################################
 # Helpers                                               #
@@ -57,31 +50,9 @@ throw_file_errors() {
     fi
 }
 
-render_template() {
-    require_command m4
-    require_command awk
-
-    m4 $flags docker-compose.m4 | awk 'NF'
-}
-
 docker_compose() {
     require_command docker-compose
-
-    docker-compose \
-        -f <(render_template) \
-        --project-directory . \
-        "$@"
-}
-
-load_env() {
-    while read -r line; do
-        if [[ "$line" == \#* ]] || [[ -z "$line" ]]; then
-            continue;
-        fi
-
-        export "${line?}"
-        flags="-D__${line?} $flags"
-    done < .env
+    docker-compose "$@"
 }
 
 download_file() { # $1: source, $2: target
@@ -104,6 +75,16 @@ request_file_content() { # $1: source
         printf "\nError: This action requires either curl or wget in your PATH.\n"
         exit 1
     fi
+}
+
+load_env() {
+    while read -r line; do
+        if [[ "$line" == \#* ]] || [[ -z "$line" ]]; then
+            continue;
+        fi
+
+        export "${line?}"
+    done < .env
 }
 
 #########################################################
@@ -142,7 +123,7 @@ action__build() {
         cacheTag="$(date '+%s')"
     fi
 
-    # Alternative 3: Random number with awk
+    # Alternative 3: Random number with shell
     if [[ -z "$cacheTag" ]] && [[ -n "$RANDOM" ]]; then
         echo ""
         echo "WARNING WARNING WARNING"
@@ -185,13 +166,10 @@ action__build() {
         cacheTag="broken-host-env"
     fi
 
-    echo -e "#> (Re-)Building with cache tag \`${cacheTag}\`...\n"
+    echo -e "#> (Re-)Building pleroma @$PLEROMA_VERSION with cache tag \`${cacheTag}\`...\n"
+    sleep 1
 
-    docker_compose build --build-arg __CACHE_TAG="$cacheTag" server
-}
-
-action__dump() {
-    cat <(render_template)
+    docker_compose build --build-arg __VIA_SCRIPT=1 --build-arg __CACHE_TAG="$cacheTag" --build-arg PLEROMA_VERSION="$PLEROMA_VERSION" server
 }
 
 action__enter() {
@@ -204,14 +182,6 @@ action__logs() {
 
 action__mix() {
     docker_compose exec server sh -c "cd ~/pleroma && mix $*"
-}
-
-action__passthrough() {
-    docker_compose "$@"
-}
-
-action__p() {
-    action__passthrough "$@"
 }
 
 action__restart() {
@@ -241,38 +211,6 @@ action__status() {
 
 action__ps() {
     action__status
-}
-
-action__debug() {
-    require_command xhost
-
-    local debug_mounts
-    debug_mounts="
-        -v $(pwd)/custom.d:/custom.d \
-        -v $(pwd)/debug.d/build:/home/pleroma/pleroma/_build \
-        -v $(pwd)/debug.d/deps:/home/pleroma/pleroma/deps \
-    "
-
-    if [[ ! -d ./debug.d ]]; then
-        mkdir -p ./debug.d/{build,deps}
-    fi
-
-    if [[ ! -d ./custom.d/lib ]]; then
-        mkdir -p ./custom.d/lib
-    fi
-
-    action__stop
-
-    docker_compose run --rm -u pleroma -w /home/pleroma/pleroma "$debug_mounts" server bash -c 'cp -rvf /custom.d/* /home/pleroma/pleroma && mix deps.get'
-
-    local x_flags=""
-    if [[ $NO_X_FORWARDING != 1 ]]; then
-        x_flags="-e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix"
-    fi
-
-    [[ $NO_X_FORWARDING == 1 ]] || xhost +local:root
-    docker_compose run --rm -u pleroma -w /home/pleroma/pleroma "$debug_mounts" "$x_flags" server bash -c "cp -rvf /custom.d/* /home/pleroma/pleroma && $*"
-    [[ $NO_X_FORWARDING == 1 ]] || xhost -local:root
 }
 
 action__mod() {
@@ -334,17 +272,7 @@ Usage:
 Actions:
     build                        (Re)build the pleroma container.
 
-    dump                         Dump the generated docker-compose.yml to stdout.
-
-    debug [bin] [args...]        Launches a new pleroma container but uses \$bin instead of phx.server as entrypoint.
-                                 **Warning**: This is intended for debugging pleroma with tools like :debugger and :observer.
-                                 It thus forwards your X-Server into docker and temporarily fiddles with your xhost
-                                 access controls. If this is a security concern for you, please export NO_X_FORWARDING=1
-                                 before launching a debugger session.
-
     enter                        Spawn a shell inside the container for debugging/maintenance.
-                                 This command does not link to the postgres container.
-                                 If you need that use #debug instead.
 
     logs                         Show the current container logs.
 
@@ -352,8 +280,6 @@ Actions:
 
     mod [file]                   Creates the file in custom.d and downloads the content from pleroma.social.
                                  The download respects your \$PLEROMA_VERSION from .env.
-
-    passthrough / p [...]        Pass any custom command to docker-compose.
 
     restart                      Executes #stop and #start respectively.
 
@@ -367,17 +293,8 @@ Actions:
                                  This operation only works in one direction.
                                  For making permanent changes to the container use custom.d.
 
-Environment:
-    DEBUG can be used to modify the loglevel.
-        DEBUG=1 prints all commands before they are executed.
-        DEBUG=2 prints all bash statements before they are executed (a lot).
+    ----------------------------
 
-    SHOPT can be used to modify shell options.
-        Pass a list of options to this variable like SHOPT='-x -e'.
-        For setting long options with -o use a colon (:) instead of a space
-        to seperate the option from -o. For example: SHOPT='-x -e -o:pipefail'.
-
-Contributing:
     You can report bugs or contribute to this project at:
         https://glitch.sh/sn0w/pleroma-docker
 "

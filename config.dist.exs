@@ -11,13 +11,25 @@ config :pleroma, Pleroma.Repo,
     hostname: "db",
     pool_size: 10
 
+# Listening to 0.0.0.0 is required in a container
+# Do not change this
+config :pleroma, Pleroma.Web.Endpoint,
+    http: [
+      ip: {0, 0, 0, 0},
+      port: 4000
+    ]
+
+config :pleroma, :gopher,
+  ip: {0, 0, 0, 0},
+  port: 9999
+
 # vvv Your awesome config options go here vvv
 
 ###
 # Here are some example values.
 # Uncomment what you need or delete it all.
 #
-# Want to use the config generator instead?
+# Want to use pleroma's config generator instead?
 # Try `./pleroma mix pleroma.instance gen` and then `./pleroma cp /home/pleroma/pleroma/config/generated_config.exs config.exs`.
 #
 # Need some inspiration?
