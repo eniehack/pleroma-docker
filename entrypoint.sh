@@ -3,34 +3,38 @@
 
 set -e
 
+log() {
+    echo -e "\n#> $@\n" 1>&2
+}
+
 if [ -n "$BUILDTIME" ]; then
-    echo "#> Getting rebar..."
+    log "Getting rebar..."
     mix local.rebar --force
 
-    echo "#> Getting hex..."
+    log "Getting hex..."
     mix local.hex --force
 
-    echo "#> Getting dependencies..."
+    log "Getting dependencies..."
     mix deps.get
 
-    echo "#> Precompiling..."
+    log "Precompiling..."
     mix compile
     exit 0
 fi
 
-echo "#> Applying customizations and patches.."
+log "Syncing changes and patches..."
 rsync -av /custom.d/ /home/pleroma/pleroma/
 
-echo "#> Recompiling..."
+log "Recompiling..."
 mix compile
 
-echo "#> Waiting until database is ready..."
+log "Waiting for postgres..."
 while ! pg_isready -U pleroma -d postgres://db:5432/pleroma -t 1; do
     sleep 1s
 done
 
-echo "#> Upgrading database..."
+log "Migrating database..."
 mix ecto.migrate
 
-echo "#> Liftoff!"
+log "Liftoff o/"
 exec mix phx.server

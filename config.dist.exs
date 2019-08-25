@@ -11,8 +11,10 @@ config :pleroma, Pleroma.Repo,
     hostname: "db",
     pool_size: 10
 
-# Listening to 0.0.0.0 is required in a container
-# Do not change this
+# Listening to 0.0.0.0 is required in a container since the IP is not known in advance
+# You should not change the options below this.
+# Instead, go change the mapping to your host ports in "docker-compose.yml"
+
 config :pleroma, Pleroma.Web.Endpoint,
     http: [
       ip: {0, 0, 0, 0},
@@ -22,6 +24,9 @@ config :pleroma, Pleroma.Web.Endpoint,
 config :pleroma, :gopher,
   ip: {0, 0, 0, 0},
   port: 9999
+
+config :esshd,
+  port: 2222
 
 # vvv Your awesome config options go here vvv
 

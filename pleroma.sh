@@ -77,12 +77,14 @@ request_file_content() { # $1: source
     fi
 }
 
+builds_args=""
 load_env() {
     while read -r line; do
         if [[ "$line" == \#* ]] || [[ -z "$line" ]]; then
             continue;
         fi
 
+        builds_args="${builds_args} --build-arg ${line?}"
         export "${line?}"
     done < .env
 }
@@ -98,7 +100,7 @@ action__build() {
     if [[ -z "$cacheTag" ]] && has_command git && has_command grep && has_command awk; then
         set +o pipefail
         local resolvedHash
-        resolvedHash="$(git ls-remote $GITLAB_URI/$ENDPOINT_REPO | grep "/$PLEROMA_VERSION" | awk '{ print $1 }')"
+        resolvedHash="$(git ls-remote $PLEROMA_GIT_REPO | grep "/$PLEROMA_VERSION" | awk '{ print $1 }')"
         set -o pipefail
 
         if [[ -n "$resolvedHash" ]]; then
@@ -169,7 +171,11 @@ action__build() {
     echo -e "#> (Re-)Building pleroma @$PLEROMA_VERSION with cache tag \`${cacheTag}\`...\n"
     sleep 1
 
-    docker_compose build --build-arg __VIA_SCRIPT=1 --build-arg __CACHE_TAG="$cacheTag" --build-arg PLEROMA_VERSION="$PLEROMA_VERSION" server
+    docker_compose build \
+        $builds_args \
+        --build-arg __VIA_SCRIPT=1 \
+        --build-arg __CACHE_TAG="$cacheTag" \
+        server
 }
 
 action__enter() {
