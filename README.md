@@ -12,10 +12,12 @@ This repository dockerizes it for easier deployment.
 /*
  * This repository comes with ABSOLUTELY NO WARRANTY
  *
- * I am not responsible for burning servers, angry users, fedi drama,
+ * I will happily help you with issues related to this script,
+ * but I am not responsible for burning servers, angry users, fedi drama,
  * thermonuclear war, or you getting fired because your boss saw your NSFW posts.
- * Please do some research if you have any concerns about included
- * features or the software used by this script ***before*** using it.
+ *
+ * Please do some research if you have any concerns about the
+ * included features or software ***before*** using it.
  *
  */
 ```
