@@ -35,7 +35,7 @@ Let me know and I'll add you to this list.
 These docs assume that you have at least a basic understanding
 of the pleroma installation process and common docker commands.
 
-If you have questions about Pleroma head over to https://docs-develop.pleroma.social/.<br>
+If you have questions about Pleroma head over to https://docs.pleroma.social/.<br>
 For help with docker check out https://docs.docker.com/.
 
 For other problems related to this script, contact me or open an issue :)
@@ -91,7 +91,7 @@ You can even replace/patch pleroma’s code with this,
 because the project is recompiled at startup if needed.
 
 In general: Prepending `custom.d/` to pleroma’s customization guides should work all the time.<br>
-Check them out in the official pleroma wiki.
+Check them out in the [pleroma documentation](https://docs.pleroma.social/small_customizations.html#content).
 
 For example: A custom thumbnail now goes into `custom.d/` + `priv/static/instance/thumbnail.jpeg`.
 
@@ -147,5 +147,5 @@ You can take a look at [this file](https://glitch.sh/hosted/pleroma/src/commit/4
 
 Thanks to [Angristan](https://github.com/Angristan/dockerfiles/tree/master/pleroma) and [RX14](https://github.com/RX14/kurisu.rx14.co.uk/blob/master/services/iscute.moe/pleroma/Dockerfile) for their dockerfiles, which served as an inspiration for the early versions of this script.
 
-The current version is based on the [official wiki guides](https://git.pleroma.social/pleroma/pleroma/tree/develop/docs/installation).<br>
+The current version is based on the [offical install instructions](https://docs.pleroma.social/alpine_linux_en.html).<br>
 Thanks to all people who contributed to those.
