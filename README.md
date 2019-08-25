@@ -109,7 +109,7 @@ This will work automagically when the proxy also lives inside of docker.
 
 Something that cofe.rocks uses is simple port-forwarding of the `server` container to the host's `127.0.0.1`.
 From there on, the natively installed nginx server acts as a proxy to the open internet.
-You can take a look at [this file](https://glitch.sh/hosted/pleroma/src/commit/4e88d93276f0bb2ef62d7f18477b156318924325/docker-compose.m4#L93) if that setup sounds interesting.
+You can take a look at [this file](https://glitch.sh/hosted/pleroma/src/commit/4e88d93276f0bb2ef62d7f18477b156318924325/docker-compose.m4#L93) and [cofe's proxy config](https://glitch.sh/hosted/pleroma/src/commit/4e88d93276f0bb2ef62d7f18477b156318924325/proxy.xconf) if that setup sounds interesting.
 
 If you need help with this, or if you think that this needs more documentation, please let me know.
 
