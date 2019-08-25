@@ -53,7 +53,7 @@ For other problems related to this script, contact me or open an issue :)
 - Clone this repository
 - Create a `config.exs` and `.env` file
 - Run `./pleroma.sh build` and `./pleroma.sh up`
-- Configure a reverse-proxy
+- [Configure a reverse-proxy](#my-instance-is-up-how-do-i-reach-it)
 - Profit!
 
 Hint:<br>

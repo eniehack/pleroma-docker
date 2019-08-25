@@ -61,8 +61,6 @@ WORKDIR /home/pleroma/pleroma
 # Bust the build cache (if needed)
 # This works by setting an environment variable with the last
 # used version/branch/tag/commit/... which originates in the script.
-# If the host doesn't have the required tool for "smart version detection"
-# we'll just use the current timestamp here which forces a rebuild every time.
 ARG __CACHE_TAG
 ENV __CACHE_TAG $__CACHE_TAG
 

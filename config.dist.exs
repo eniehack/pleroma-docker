@@ -1,19 +1,8 @@
 use Mix.Config
 
-# pleroma/pleroma/pleroma are the default credentials for the
-# managed database container. "db" is the default interlinked hostname.
-# You shouldn't need to change this unless you modifed .env
-config :pleroma, Pleroma.Repo,
-    adapter: Ecto.Adapters.Postgres,
-    username: "pleroma",
-    password: "pleroma",
-    database: "pleroma",
-    hostname: "db",
-    pool_size: 10
-
-# Listening to 0.0.0.0 is required in a container since the IP is not known in advance
-# You should not change the options below this.
-# Instead, go change the mapping to your host ports in "docker-compose.yml"
+# Listening to 0.0.0.0 is required in a container since the IP is not known in advance.
+# You should not change the following three ip/port mappings.
+# Instead, change the mapping to your host ports in "docker-compose.yml".
 
 config :pleroma, Pleroma.Web.Endpoint,
     http: [
@@ -28,7 +17,19 @@ config :pleroma, :gopher,
 config :esshd,
   port: 2222
 
+# pleroma/pleroma/pleroma are the default credentials.
+# "db" is the default interlinked hostname.
+# You shouldn't need to change this.
+config :pleroma, Pleroma.Repo,
+    adapter: Ecto.Adapters.Postgres,
+    username: "pleroma",
+    password: "pleroma",
+    database: "pleroma",
+    hostname: "db"
+
+#
 # vvv Your awesome config options go here vvv
+#
 
 ###
 # Here are some example values.

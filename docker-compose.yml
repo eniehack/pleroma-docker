@@ -5,10 +5,17 @@ services:
     image: postgres:10-alpine
     init: true
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: pleroma
-      POSTGRES_USER: pleroma
-      POSTGRES_PASSWORD: pleroma
+    environment: {
+      # This might seem insecure but is usually not a problem.
+      # You should leave this at the "pleroma" default.
+      # The DB is only reachable by containers in the same docker network,
+      # and is not exposed to the open internet.
+      #
+      # If you do change this, remember to update "config.exs".
+      POSTGRES_DB: pleroma,
+      POSTGRES_USER: pleroma,
+      POSTGRES_PASSWORD: pleroma,
+    }
     volumes:
       - $DOCKER_DATADIR/db:/var/lib/postgresql/data
       - ./initdb.sql:/docker-entrypoint-initdb.d/pleroma.sql
