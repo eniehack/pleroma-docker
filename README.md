@@ -79,7 +79,7 @@ Pleroma maintenance is usually done with mix tasks.
 
 You can run these tasks in your running pleroma server using `./pleroma.sh mix [task] [arguments...]`.
 
-For example: `/pleroma.sh mix pleroma.user new sn0w ...`
+For example: `./pleroma.sh mix pleroma.user new sn0w ...`
 
 If you need to fix bigger problems you can also spawn a shell with `./pleroma.sh enter`.
 
