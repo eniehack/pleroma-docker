@@ -42,7 +42,7 @@ For other problems related to this script, contact me or open an issue :)
 
 ### Prerequisites
 
-- ~500mb of free HDD space
+- ~1GB of free HDD space
 - `git` if you want smart build caches
 - `curl`, `jq`, and `dialog` if you want to use `./pleroma.sh mod`
 - Bash 4+
@@ -60,6 +60,13 @@ Hint:<br>
 You can also use normal `docker-compose` commands to maintain your setup.<br>
 The only command that you cannot use is `docker-compose build` due to build caching.
 
+### Configuration
+
+All the pleroma options that you usually put into your `*.secret.exs` now go into `config.exs`.
+
+`.env` stores config values that need to be known at orchestration/build time.<br>
+Documentation for the possible values is inside of that file.
+
 ### Updates
 
 Run `./pleroma.sh build` again and start the updated image with `./pleroma.sh up`.
@@ -69,10 +76,30 @@ You don't need to stop your pleroma server for either of those commands.
 ### Maintenance
 
 Pleroma maintenance is usually done with mix tasks.
+
 You can run these tasks in your running pleroma server using `./pleroma.sh mix [task] [arguments...]`.
+
 If you need to fix some bigger issues you can also spawn a shell with `./pleroma.sh enter`.
 
 For example: `/pleroma.sh mix pleroma.user new sn0w ...`
+
+### Customization
+
+Add your customizations (and their folder structure) to `custom.d/`.<br>
+They will be copied into the right place when the container starts.<br>
+You can even replace/patch pleroma’s code with this,
+because the project is recompiled at startup if needed.
+
+In general: Prepending `custom.d/` to pleroma’s customization guides should work all the time.<br>
+Check them out in the official pleroma wiki.
+
+For example: A custom thumbnail now goes into `custom.d/` + `priv/static/instance/thumbnail.jpeg`.
+
+### Patches
+
+Works exactly like customization, but we have a neat little helper here.
+
+Use `./pleroma.sh mod [regex]` to mod any file that ships with pleroma, without having to type the complete path.
 
 ### My instance is up, how do I reach it?
 
@@ -115,31 +142,6 @@ If you need help with this, or if you think that this needs more documentation, 
 Something that cofe.rocks uses is simple port-forwarding of the `server` container to the host's `127.0.0.1`.
 From there on, the natively installed nginx server acts as a proxy to the open internet.
 You can take a look at [this file](https://glitch.sh/hosted/pleroma/src/commit/4e88d93276f0bb2ef62d7f18477b156318924325/docker-compose.m4#L93) and [cofe's proxy config](https://glitch.sh/hosted/pleroma/src/commit/4e88d93276f0bb2ef62d7f18477b156318924325/proxy.xconf) if that setup sounds interesting.
-
-### Customization
-
-Add your customizations (and their folder structure) to `custom.d/`.<br>
-They will be copied into the right place when the container starts.<br>
-You can even replace/patch pleroma’s code with this,
-because the project is recompiled at startup if needed.
-
-In general: Prepending `custom.d/` to pleroma’s customization guides should work all the time.<br>
-Check them out in the official pleroma wiki.
-
-For example: A custom thumbnail now goes into `custom.d/` + `priv/static/instance/thumbnail.jpeg`.
-
-### Patches
-
-Works exactly like customization, but we have a neat little helper here.
-
-Use `./pleroma.sh mod [regex]` to mod any file that ships with pleroma, without having to type the complete path.
-
-### Configuration
-
-All the pleroma options that you usually put into your `*.secret.exs` now go into `config.exs`.
-
-`.env` stores config values that need to be known at orchestration/build time.<br>
-Documentation for the possible values is inside of that file.
 
 ### Attribution
 

@@ -30,7 +30,7 @@ RUN \
     apk add --no-cache --virtual .runtime \
         imagemagick \
         elixir erlang erlang-runtime-tools \
-        erlang-xmerl erlang-ssl erlang-ssh erlang-eldap
+        erlang-xmerl erlang-ssl erlang-ssh erlang-eldap erlang-mnesia
 
 # Add entrypoint
 COPY ./entrypoint.sh /
