@@ -179,7 +179,7 @@ action__build() {
 }
 
 action__enter() {
-    docker_compose exec server sh -c 'cd ~/pleroma && bash'
+    docker_compose exec server sh -c 'cd ~/pleroma && ash'
 }
 
 action__logs() {
