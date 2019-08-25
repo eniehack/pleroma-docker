@@ -45,4 +45,5 @@ services:
     volumes:
       - ./custom.d:/custom.d:ro
       - ./config.exs:/home/pleroma/pleroma/config/prod.secret.exs:ro
+      - ./config.exs:/home/pleroma/pleroma/config/dev.secret.exs:ro
       - $DOCKER_DATADIR/uploads:/uploads
