@@ -1,10 +1,10 @@
-data
-.env
-config.yml
+data/
+cache/
 custom.d/
 !custom.d/.gitkeep
-docker-compose.yml
 config.exs
+secret.exs
+.env
 
 # Created by https://www.gitignore.io/api/osx,linux,windows
 
