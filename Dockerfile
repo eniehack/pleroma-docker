@@ -68,8 +68,7 @@ ENV __CACHE_TAG $__CACHE_TAG
 ARG PLEROMA_VERSION
 RUN \
     git fetch --all && \
-    git checkout $PLEROMA_VERSION && \
-    git pull --rebase --autostash
+    git checkout $PLEROMA_VERSION
 
 # Precompile
 RUN \
