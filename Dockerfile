@@ -14,7 +14,7 @@ ARG MIX_ENV
 ENV MIX_ENV=$MIX_ENV
 
 # Prepare mounts
-VOLUME /custom.d
+VOLUME /custom.d /uploads
 
 # Expose HTTP, Gopher, and SSH ports, respectively
 EXPOSE 4000 9999 2222
