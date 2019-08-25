@@ -76,11 +76,14 @@ For example: `/pleroma.sh mix pleroma.user new sn0w ...`
 
 ### My instance is up, how do I reach it?
 
-Older versions of this script contained a huge amount of scripting to support all kinds of reverse-proxy setups.<br>
-This newer version tries to focus only on providing good setup tooling.
+To reach Gopher or SSH, just uncomment the port-forward in your `docker-compose.yml`.
 
-You will have to configure your own reverse-proxy.<br>
-You can use Caddy, Traefik, Apache, nginx, or whatever else you could come up with.<br>
+To reach HTTP you will have to configure a "reverse-proxy".
+Older versions of this script contained a huge amount of scripting to support all kinds of reverse-proxy setups.
+This newer version tries to focus only on providing good pleroma tooling.
+That makes the whole process a bit more manual, but also more flexible.
+
+You can use Caddy, Traefik, Apache, nginx, or whatever else you come up with.<br>
 Just modify your `docker-compose.yml` accordingly.
 
 One example would be to add an [nginx server](https://hub.docker.com/_/nginx) to your `docker-compose.yml`:
@@ -107,11 +110,11 @@ Using apache would work in a very similar way (see [Apache Docker Docs](https://
 The target that you proxy to is called `http://server:4000/`.<br>
 This will work automagically when the proxy also lives inside of docker.
 
+If you need help with this, or if you think that this needs more documentation, please let me know.
+
 Something that cofe.rocks uses is simple port-forwarding of the `server` container to the host's `127.0.0.1`.
 From there on, the natively installed nginx server acts as a proxy to the open internet.
 You can take a look at [this file](https://glitch.sh/hosted/pleroma/src/commit/4e88d93276f0bb2ef62d7f18477b156318924325/docker-compose.m4#L93) and [cofe's proxy config](https://glitch.sh/hosted/pleroma/src/commit/4e88d93276f0bb2ef62d7f18477b156318924325/proxy.xconf) if that setup sounds interesting.
-
-If you need help with this, or if you think that this needs more documentation, please let me know.
 
 ### Customization
 
