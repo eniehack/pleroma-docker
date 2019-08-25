@@ -16,8 +16,8 @@ ENV MIX_ENV=$MIX_ENV
 # Prepare mounts
 VOLUME /custom.d
 
-# Expose default pleroma port to host
-EXPOSE 4000
+# Expose HTTP, Gopher, and SSH ports, respectively
+EXPOSE 4000 9999 2222
 
 # Get dependencies
 RUN \
@@ -40,7 +40,6 @@ ENTRYPOINT ["/entrypoint.sh"]
 # Limit permissions
 ARG DOCKER_UID
 ARG DOCKER_GID
-
 RUN \
     echo "#> Pleroma user will be ${DOCKER_UID}:${DOCKER_GID}" 1>&2 && \
     addgroup -g ${DOCKER_GID} pleroma && \
