@@ -108,7 +108,7 @@ Use `./pleroma.sh mod [regex]` to mod any file that ships with pleroma, without 
 To reach Gopher or SSH, just uncomment the port-forward in your `docker-compose.yml`.
 
 To reach HTTP you will have to configure a "reverse-proxy".
-Older versions of this script contained a huge amount of scripting to support all kinds of reverse-proxy setups.
+Older versions of this project contained a huge amount of scripting to support all kinds of reverse-proxy setups.
 This newer version tries to focus only on providing good pleroma tooling.
 That makes the whole process a bit more manual, but also more flexible.
 
