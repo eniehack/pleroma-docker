@@ -4,13 +4,16 @@
 set -e
 
 if [ -n "$BUILDTIME" ]; then
-    echo "#> Preparing compilation..."
-
+    echo "#> Getting rebar..."
     mix local.rebar --force
+
+    echo "#> Getting hex..."
     mix local.hex --force
 
-    echo "#> Compiling..."
+    echo "#> Getting dependencies..."
     mix deps.get
+
+    echo "#> Precompiling..."
     mix compile
     exit 0
 fi

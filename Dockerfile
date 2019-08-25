@@ -72,6 +72,3 @@ RUN \
     cp ./config/dev.exs ./config/prod.secret.exs \
     && BUILDTIME=1 /entrypoint.sh \
     && rm ./config/prod.secret.exs
-
-# Insert overrides
-COPY --chown=pleroma:pleroma ./custom.d /home/pleroma/pleroma
