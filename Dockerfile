@@ -65,10 +65,14 @@ ARG __CACHE_TAG
 ENV __CACHE_TAG $__CACHE_TAG
 
 # Fetch changes, checkout
+# Only pull if the version-string happens to be a branch
 ARG PLEROMA_VERSION
 RUN \
     git fetch --all && \
-    git checkout $PLEROMA_VERSION
+    git checkout $PLEROMA_VERSION && \
+    if git show-ref --quiet "refs/heads/$PLEROMA_VERSION"; then \
+        git pull --rebase --autostash; \
+    fi
 
 # Precompile
 RUN \
