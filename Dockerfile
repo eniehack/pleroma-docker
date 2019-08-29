@@ -21,6 +21,10 @@ EXPOSE 4000 9999 2222
 
 # Get dependencies
 RUN \
+    apk --no-cache add tzdata && \
+    cp /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
+    apk del tzdata \
+    && \
     apk add --no-cache --virtual .tools \
         git curl rsync postgresql-client \
     && \
